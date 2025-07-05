@@ -61,7 +61,7 @@ export const extractMetadata = async (file: File): Promise<SongMetadata | null> 
   }
 }
 
-export const analyzePDFForMusic = async (file: File): Promise<any> => {
+export const analyzePDFForMusic = async (_file: File): Promise<any> => {
   // This would be a more advanced feature to analyze the PDF content
   // for musical elements like notes, time signatures, etc.
   // For now, we'll return basic structure

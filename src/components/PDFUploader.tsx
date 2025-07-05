@@ -2,11 +2,20 @@ import React, { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { FiUpload, FiFile } from 'react-icons/fi'
 import { useAppStore } from '../store/useAppStore'
-import { processPDF, extractMetadata } from '../utils/pdfProcessor'
+import { FileManager } from '../utils/fileManager'
 import './PDFUploader.scss'
 
 export const PDFUploader: React.FC = () => {
-  const { setPDF, setSheetMusicPages, setSongMetadata, setIsLoading, setError } = useAppStore()
+  const { 
+    setPDF, 
+    setSheetMusicPages, 
+    setSongMetadata, 
+    setIsLoading, 
+    setError,
+    addSheetMusic,
+    sheetMusicCollection,
+    setCurrentSheetMusic
+  } = useAppStore()
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -21,25 +30,39 @@ export const PDFUploader: React.FC = () => {
     setError(null)
 
     try {
-      setPDF(file)
+      // Create sheet music file entry
+      const sheetMusicFile = await FileManager.addSheetMusicFile(file)
       
-      // Process PDF pages and extract metadata in parallel
-      const [pages, metadata] = await Promise.all([
-        processPDF(file),
-        extractMetadata(file)
-      ])
+      // Add to collection
+      addSheetMusic(sheetMusicFile)
       
-      setSheetMusicPages(pages)
-      if (metadata) {
-        setSongMetadata(metadata)
-      }
+      // Set as current sheet music
+      setCurrentSheetMusic(sheetMusicFile)
+      
+      // Update local storage with new collection
+      const updatedCollection = [...sheetMusicCollection, sheetMusicFile]
+      await FileManager.saveSheetMusicCollection(updatedCollection)
+      
+      // Simulate copying to sheet_music folder
+      await FileManager.copyToSheetMusicFolder(file)
+      
+      console.log('Sheet music uploaded and added to collection successfully')
     } catch (error) {
       setError('Failed to process PDF. Please try again.')
       console.error('PDF processing error:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [setPDF, setSheetMusicPages, setIsLoading, setError])
+  }, [
+    setPDF, 
+    setSheetMusicPages, 
+    setSongMetadata, 
+    setIsLoading, 
+    setError, 
+    addSheetMusic, 
+    sheetMusicCollection, 
+    setCurrentSheetMusic
+  ])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

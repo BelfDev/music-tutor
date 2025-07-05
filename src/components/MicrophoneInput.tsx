@@ -7,14 +7,11 @@ import './MicrophoneInput.scss'
 
 export const MicrophoneInput: React.FC = () => {
   const {
-    microphoneEnabled,
-    microphonePermission,
     detectedNotes,
     setMicrophoneEnabled,
     setMicrophonePermission,
     setDetectedNotes,
-    addActiveNote,
-    removeActiveNote
+    addActiveNote
   } = useAppStore()
 
   const [audioLevel, setAudioLevel] = useState(0)

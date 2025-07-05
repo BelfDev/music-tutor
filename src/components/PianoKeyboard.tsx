@@ -94,7 +94,7 @@ export const PianoKeyboard: React.FC = () => {
     <div className="piano-keyboard">
       <div className="keyboard-container">
         <div className="keyboard">
-          {keys.map((key, index) => (
+          {keys.map((key) => (
             <div
               key={`${key.note}-${key.octave}-${key.midi}`}
               className={`

@@ -38,21 +38,23 @@
 .learning-interface {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px);
+  height: calc(100vh - 140px);
   max-width: 1600px;
   margin: 0 auto;
   gap: 1rem;
+  padding: 1rem;
 
   .learning-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: start;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 12px;
     padding: 1rem 1.5rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
-    min-height: 80px;
+    min-height: auto;
   }
 
   .current-section {
@@ -64,7 +66,8 @@
     backdrop-filter: blur(10px);
     display: flex;
     flex-direction: column;
-    min-height: 300px;
+    min-height: 400px;
+    max-height: 60vh;
 
     .section-header {
       display: flex;
@@ -73,6 +76,7 @@
       margin-bottom: 1rem;
       padding-bottom: 0.5rem;
       border-bottom: 2px solid #e0e0e0;
+      flex-shrink: 0;
 
       h3 {
         margin: 0;
@@ -100,10 +104,12 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #f8f9fa;
+      background: #ffffff;
       border-radius: 8px;
       overflow: hidden;
       position: relative;
+      min-height: 300px;
+      border: 1px solid #e0e0e0;
     }
   }
 
@@ -113,22 +119,23 @@
     padding: 1rem;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
-    min-height: 200px;
+    flex-shrink: 0;
   }
 
   .learning-controls {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
+    flex-shrink: 0;
 
     .controls-left,
     .controls-right {
-      flex: 1;
       background: rgba(255, 255, 255, 0.95);
       border-radius: 12px;
       padding: 1rem;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
       backdrop-filter: blur(10px);
+      min-height: 200px;
     }
   }
 }
@@ -137,16 +144,21 @@
 @media (max-width: 1200px) {
   .learning-interface {
     height: auto;
-    min-height: calc(100vh - 120px);
+    min-height: calc(100vh - 140px);
+    padding: 0.75rem;
 
     .learning-header {
-      flex-direction: column;
+      grid-template-columns: 1fr;
       gap: 1rem;
-      min-height: auto;
     }
 
     .current-section {
-      min-height: 250px;
+      min-height: 350px;
+      max-height: 50vh;
+    }
+
+    .learning-controls {
+      grid-template-columns: 1fr;
     }
   }
 }
@@ -166,6 +178,8 @@
 
   .learning-interface {
     gap: 0.75rem;
+    padding: 0.5rem;
+    height: auto;
 
     .learning-header,
     .current-section,
@@ -175,11 +189,10 @@
       padding: 1rem;
     }
 
-    .learning-controls {
-      flex-direction: column;
-    }
-
     .current-section {
+      min-height: 300px;
+      max-height: 40vh;
+
       .section-header {
         flex-direction: column;
         align-items: flex-start;
@@ -224,38 +237,50 @@
 
 // Error states
 .error-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
   background: #dc3545;
   color: white;
   padding: 1rem 1.5rem;
   border-radius: 8px;
-  margin-bottom: 1rem;
+  box-shadow: 0 4px 20px rgba(220, 53, 69, 0.3);
+  z-index: 1000;
+  max-width: 400px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+  gap: 1rem;
+  animation: slideIn 0.3s ease-out;
   
-  .error-icon {
-    flex-shrink: 0;
-    font-size: 1.2rem;
-  }
-  
-  .error-text {
+  .error-content {
     flex: 1;
-    font-weight: 500;
+    font-size: 0.9rem;
+    line-height: 1.4;
   }
   
-  .error-close {
+  .close-button {
     background: none;
     border: none;
     color: white;
     font-size: 1.2rem;
     cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+    padding: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
     
     &:hover {
-      background: rgba(255, 255, 255, 0.2);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
     }
   }
 }

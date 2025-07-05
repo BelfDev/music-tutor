@@ -93,9 +93,8 @@ const App: React.FC = () => {
       <main className="main-content">
         {error && (
           <div className="error-message">
-            <span className="error-icon">⚠️</span>
-            <span className="error-text">{error}</span>
-            <button className="error-close" onClick={() => setError(null)}>
+            <div className="error-content">{error}</div>
+            <button className="close-button" onClick={() => setError(null)}>
               ✕
             </button>
           </div>

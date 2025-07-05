@@ -121,9 +121,14 @@ export const PDFUploader: React.FC = () => {
       addSheetMusicItem(sheetMusicItem)
       
       // Save to localStorage
-      const { sheetMusicCollection } = useAppStore.getState()
-      const updatedCollection = [...sheetMusicCollection, sheetMusicItem]
-      await FileManager.saveSheetMusicCollection(updatedCollection)
+      try {
+        const { sheetMusicCollection } = useAppStore.getState()
+        const updatedCollection = [...sheetMusicCollection, sheetMusicItem]
+        await FileManager.saveSheetMusicCollection(updatedCollection)
+      } catch (storageError) {
+        console.warn('Failed to save to localStorage (quota exceeded):', storageError)
+        // Continue without saving to localStorage - the item is still in memory
+      }
       
       console.log('Successfully processed PDF:', file.name)
       

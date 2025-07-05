@@ -1,11 +1,12 @@
 // SheetMusicViewer component styles
 .sheet-music-viewer {
   height: 100%;
+  min-height: 500px;
   display: flex;
   flex-direction: column;
   background: #2d2d2d;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .viewer-controls {
@@ -15,10 +16,25 @@
   padding: 1rem;
   background: #1a1a1a;
   border-bottom: 1px solid #444;
+  gap: 1rem;
   
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 1rem;
+  }
+}
+
+.back-control {
+  display: flex;
+  align-items: center;
+  
+  .back-button {
+    background: #4a90e2;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background: #357abd;
+    }
   }
 }
 
@@ -60,6 +76,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  min-height: 400px;
 }
 
 .sheet-music-page {
@@ -69,9 +86,11 @@
 
 .sheet-music-image {
   max-width: 100%;
+  width: auto;
   height: auto;
   border-radius: 4px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  display: block;
 }
 
 .no-music {

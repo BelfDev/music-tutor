@@ -1,16 +1,16 @@
 import React, { useEffect } from 'react'
+import './App.scss'
 import { Header } from './components/Header'
-import { PDFUploader } from './components/PDFUploader'
-import { SheetMusicCollection } from './components/SheetMusicCollection'
-import { SheetMusicViewer } from './components/SheetMusicViewer'
-import { PianoKeyboard } from './components/PianoKeyboard'
-import { PlaybackControls } from './components/PlaybackControls'
-import { SongInfo } from './components/SongInfo'
 import { LearningAids } from './components/LearningAids'
 import { MicrophoneInput } from './components/MicrophoneInput'
+import { PDFUploader } from './components/PDFUploader'
+import { PianoKeyboard } from './components/PianoKeyboard'
+import { PlaybackControls } from './components/PlaybackControls'
+import { SheetMusicCollection } from './components/SheetMusicCollection'
+import { SheetMusicViewer } from './components/SheetMusicViewer'
+import { SongInfo } from './components/SongInfo'
 import { useAppStore } from './store/useAppStore'
 import { FileManager } from './utils/fileManager'
-import './App.scss'
 
 const App: React.FC = () => {
   const { 
@@ -78,6 +78,14 @@ const App: React.FC = () => {
           <div className="app-layout">
             <div className="sheet-music-section">
               <SheetMusicViewer />
+              
+              {/* Show collection at the bottom when PDF is loaded */}
+              {sheetMusicCollection.length > 1 && (
+                <div className="collection-mini">
+                  <h4>Your Collection</h4>
+                  <SheetMusicCollection />
+                </div>
+              )}
             </div>
             
             <div className="controls-section">

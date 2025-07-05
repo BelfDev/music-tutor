@@ -221,6 +221,42 @@
   }
 }
 
+// Mini collection styles (when shown in sheet music section)
+.collection-mini .sheet-music-collection {
+  padding: 0;
+  
+  .collection-header {
+    margin-bottom: 1rem;
+    
+    h2 {
+      font-size: 1.2rem;
+    }
+  }
+  
+  .collection-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .sheet-music-card {
+    .card-thumbnail {
+      height: 120px;
+    }
+    
+    .card-content {
+      padding: 0.75rem;
+      
+      .card-title {
+        font-size: 1rem;
+      }
+      
+      .metadata-item {
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
 @media (max-width: 768px) {
   .sheet-music-collection {
     padding: 1rem;
@@ -233,6 +269,12 @@
       flex-direction: column;
       gap: 0.5rem;
       text-align: center;
+    }
+  }
+  
+  .collection-mini .sheet-music-collection {
+    .collection-grid {
+      grid-template-columns: 1fr;
     }
   }
 }

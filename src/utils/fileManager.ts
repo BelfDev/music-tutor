@@ -1,6 +1,6 @@
 import { SheetMusicFile } from '../store/useAppStore'
-import { processPDF, extractMetadata } from './pdfProcessor'
 import { MusicNotationParser } from './musicNotationParser'
+import { extractMetadata, processPDF } from './pdfProcessor'
 
 export class FileManager {
   private static SHEET_MUSIC_STORAGE_KEY = 'sheetMusicCollection'
@@ -88,9 +88,17 @@ export class FileManager {
   // Add a new sheet music file to collection
   static async addSheetMusicFile(file: File): Promise<SheetMusicFile> {
     try {
+      console.log('FileManager.addSheetMusicFile called with:', file.name)
       const id = this.generateId()
+      console.log('Generated ID:', id)
+      
+      console.log('Processing PDF...')
       const pages = await processPDF(file)
+      console.log('PDF processed, pages count:', pages.length)
+      
+      console.log('Extracting metadata...')
       const metadata = await extractMetadata(file)
+      console.log('Metadata extracted:', metadata)
       
       const finalMetadata = metadata || {
         title: file.name.replace('.pdf', ''),
@@ -99,12 +107,15 @@ export class FileManager {
         timeSignature: '4/4',
         key: 'C major'
       }
+      console.log('Final metadata:', finalMetadata)
       
       // Generate music sequence
+      console.log('Generating music sequence...')
       const musicSequence = await MusicNotationParser.parsePDFToMusicSequence(
         file, 
         finalMetadata
       )
+      console.log('Music sequence generated:', musicSequence)
       
       const sheetMusic: SheetMusicFile = {
         id,
@@ -117,6 +128,7 @@ export class FileManager {
         musicSequence
       }
 
+      console.log('Sheet music object created:', sheetMusic)
       return sheetMusic
     } catch (error) {
       console.error('Failed to add sheet music file:', error)

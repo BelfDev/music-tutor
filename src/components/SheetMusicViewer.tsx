@@ -1,10 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { FiChevronLeft, FiChevronRight, FiZoomIn, FiZoomOut } from 'react-icons/fi'
+import { FiArrowLeft, FiChevronLeft, FiChevronRight, FiZoomIn, FiZoomOut } from 'react-icons/fi'
 import { useAppStore } from '../store/useAppStore'
 import './SheetMusicViewer.scss'
 
 export const SheetMusicViewer: React.FC = () => {
-  const { sheetMusicPages, currentPage, setCurrentPage, isPlaying, currentBar } = useAppStore()
+  const { 
+    sheetMusicPages, 
+    currentPage, 
+    setCurrentPage, 
+    isPlaying, 
+    currentBar,
+    setCurrentSheetMusic 
+  } = useAppStore()
   const [zoom, setZoom] = useState(1.0)
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
@@ -37,6 +44,10 @@ export const SheetMusicViewer: React.FC = () => {
     setZoom(prev => Math.max(prev - 0.1, 0.5))
   }
 
+  const goBackToCollection = () => {
+    setCurrentSheetMusic(null)
+  }
+
   if (!sheetMusicPages.length) {
     return (
       <div className="sheet-music-viewer">
@@ -50,6 +61,16 @@ export const SheetMusicViewer: React.FC = () => {
   return (
     <div className="sheet-music-viewer" ref={containerRef}>
       <div className="viewer-controls">
+        <div className="back-control">
+          <button
+            className="control-button back-button"
+            onClick={goBackToCollection}
+            title="Back to Collection"
+          >
+            <FiArrowLeft />
+          </button>
+        </div>
+        
         <div className="page-controls">
           <button
             className="control-button"

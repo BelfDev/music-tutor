@@ -1,10 +1,19 @@
 import React from 'react'
-import { FiMusic, FiSettings } from 'react-icons/fi'
+import { FiFile, FiFolder, FiMusic, FiSettings } from 'react-icons/fi'
 import { useAppStore } from '../store/useAppStore'
 import './Header.scss'
 
 export const Header: React.FC = () => {
-  const { reset } = useAppStore()
+  const { 
+    currentSheetMusic, 
+    sheetMusicCollection,
+    setCurrentSheetMusic,
+    reset 
+  } = useAppStore()
+
+  const showCollection = () => {
+    setCurrentSheetMusic(null)
+  }
 
   return (
     <header className="header">
@@ -15,6 +24,27 @@ export const Header: React.FC = () => {
         </div>
         
         <nav className="nav">
+          {sheetMusicCollection.length > 0 && (
+            <button
+              className={`nav-button ${!currentSheetMusic ? 'active' : ''}`}
+              onClick={showCollection}
+              title="View Collection"
+            >
+              <FiFolder />
+              Collection ({sheetMusicCollection.length})
+            </button>
+          )}
+          
+          {currentSheetMusic && (
+            <button
+              className="nav-button active"
+              title="Current Sheet Music"
+            >
+              <FiFile />
+              {currentSheetMusic.metadata.title}
+            </button>
+          )}
+          
           <button
             className="nav-button"
             onClick={reset}
@@ -22,6 +52,7 @@ export const Header: React.FC = () => {
           >
             New Session
           </button>
+          
           <button
             className="nav-button"
             title="Settings"

@@ -40,18 +40,25 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  
+  @media (max-width: 768px) {
+    gap: 0.5rem;
+  }
 }
 
 .nav-button {
   background: #3a3a3a;
   color: #ffffff;
+  border: none;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-size: 0.9rem;
+  cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
   
   &:hover {
     background: #4a4a4a;
@@ -62,8 +69,22 @@
     transform: translateY(0);
   }
   
+  &.active {
+    background: #4a90e2;
+    color: white;
+    
+    &:hover {
+      background: #357abd;
+    }
+  }
+  
   svg {
     font-size: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
   }
   
   @media (max-width: 480px) {

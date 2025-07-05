@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { FiPlay, FiPause, FiSquare, FiSkipBack, FiSkipForward, FiRepeat } from 'react-icons/fi'
+import React, { useEffect, useRef, useState } from 'react'
+import { FiPause, FiPlay, FiRepeat, FiSkipBack, FiSkipForward, FiSquare } from 'react-icons/fi'
 import { useAppStore } from '../store/useAppStore'
 import { AudioEngine } from '../utils/audioEngine'
 import { MusicNotationParser } from '../utils/musicNotationParser'

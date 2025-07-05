@@ -1,0 +1,88 @@
+// PDFUploader component styles
+.pdf-uploader {
+  width: 100%;
+  max-width: 600px;
+}
+
+.dropzone {
+  border: 3px dashed #555;
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #2d2d2d;
+  
+  &:hover, &.active {
+    border-color: #4a90e2;
+    background: #3a3a3a;
+    transform: translateY(-2px);
+  }
+  
+  &.active {
+    border-color: #7ed321;
+    background: #1a2a1a;
+  }
+}
+
+.dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  
+  .upload-icon {
+    font-size: 3rem;
+    color: #4a90e2;
+    margin-bottom: 0.5rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    color: #ffffff;
+    margin: 0;
+  }
+  
+  p {
+    font-size: 1.1rem;
+    color: #ccc;
+    margin: 0;
+    line-height: 1.4;
+  }
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #444;
+  border-radius: 20px;
+  color: #ccc;
+  font-size: 0.9rem;
+  
+  .file-icon {
+    font-size: 1rem;
+    color: #4a90e2;
+  }
+}
+
+@media (max-width: 480px) {
+  .dropzone {
+    padding: 2rem 1rem;
+  }
+  
+  .dropzone-content {
+    .upload-icon {
+      font-size: 2rem;
+    }
+    
+    h2 {
+      font-size: 1.25rem;
+    }
+    
+    p {
+      font-size: 1rem;
+    }
+  }
+}

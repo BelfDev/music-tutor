@@ -1,0 +1,134 @@
+// SongInfo component styles
+.song-info {
+  background: #2d2d2d;
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.info-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.song-header {
+  .song-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    
+    .icon {
+      color: #4a90e2;
+      font-size: 1.2rem;
+    }
+    
+    h2 {
+      margin: 0;
+      font-size: 1.3rem;
+      color: #fff;
+    }
+  }
+  
+  .song-composer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #ccc;
+    
+    .icon {
+      font-size: 1rem;
+    }
+  }
+}
+
+.song-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  label {
+    color: #999;
+    font-size: 0.9rem;
+  }
+  
+  span {
+    color: #fff;
+    font-weight: 500;
+  }
+}
+
+.playback-info {
+  h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: #ccc;
+  }
+}
+
+.position-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.position-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  label {
+    color: #999;
+    font-size: 0.85rem;
+  }
+  
+  .position-value {
+    background: #3a3a3a;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+}
+
+.playback-status {
+  display: flex;
+  justify-content: center;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  
+  .icon {
+    font-size: 1rem;
+  }
+  
+  &.playing {
+    background: #7ed321;
+    color: #000;
+  }
+  
+  &.paused {
+    background: #f5a623;
+    color: #000;
+  }
+}

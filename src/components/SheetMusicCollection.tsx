@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FiCalendar, FiMusic, FiPlay, FiTrash2, FiUser } from 'react-icons/fi'
+import { FiCalendar, FiMusic, FiPlay, FiRefreshCw, FiTrash2, FiUser } from 'react-icons/fi'
 import { SheetMusicItem, useAppStore } from '../store/useAppStore'
 import { FileManager } from '../utils/fileManager'
 import './SheetMusicCollection.scss'
@@ -9,7 +9,9 @@ export const SheetMusicCollection: React.FC = () => {
     sheetMusicCollection, 
     currentSheetMusic, 
     setCurrentSheetMusic, 
-    setError 
+    setError,
+    removeSheetMusicItem,
+    loadSheetMusicCollection
   } = useAppStore()
   
   const [isLoading, setIsLoading] = useState(false)
@@ -29,29 +31,66 @@ export const SheetMusicCollection: React.FC = () => {
   const handleRemoveSheetMusic = async (id: string) => {
     if (window.confirm('Are you sure you want to remove this sheet music from your collection?')) {
       try {
-        // Remove from collection
+        // Remove from store first
+        removeSheetMusicItem(id)
+        
+        // Get the updated collection from the store
         const updatedCollection = sheetMusicCollection.filter(item => item.id !== id)
         
-        // Update local storage
+        // Update local storage with the new collection
         await FileManager.updateSheetMusicCollection(updatedCollection)
         
         // If the removed item was currently selected, clear the selection
         if (currentSheetMusic?.id === id) {
           setCurrentSheetMusic(null)
         }
+        
+        console.log(`Sheet music with ID ${id} removed from collection (file not deleted)`)
       } catch (error) {
-        setError('Failed to remove sheet music')
+        setError('Failed to remove sheet music from collection')
         console.error('Error removing sheet music:', error)
       }
     }
   }
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
+  const handleClearCollection = async () => {
+    if (window.confirm('Are you sure you want to clear your entire collection? This will remove all items from the collection but will not delete the actual PDF files.')) {
+      try {
+        // Clear the store
+        loadSheetMusicCollection([])
+        
+        // Clear localStorage
+        FileManager.clearSheetMusicCollection()
+        
+        // Clear current selection
+        setCurrentSheetMusic(null)
+        
+        console.log('Collection cleared successfully')
+      } catch (error) {
+        setError('Failed to clear collection')
+        console.error('Error clearing collection:', error)
+      }
+    }
+  }
+
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return 'Unknown'
+    
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date
+      if (isNaN(dateObj.getTime())) {
+        return 'Unknown'
+      }
+      
+      return dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch (error) {
+      console.error('Error formatting date:', error)
+      return 'Unknown'
+    }
   }
 
   if (sheetMusicCollection.length === 0) {
@@ -69,8 +108,22 @@ export const SheetMusicCollection: React.FC = () => {
   return (
     <div className="sheet-music-collection">
       <div className="collection-header">
-        <h2>Your Sheet Music Collection</h2>
-        <span className="collection-count">{sheetMusicCollection.length} pieces</span>
+        <div className="header-left">
+          <h2>Your Sheet Music Collection</h2>
+          <span className="collection-count">{sheetMusicCollection.length} pieces</span>
+        </div>
+        {sheetMusicCollection.length > 0 && (
+          <div className="header-actions">
+            <button
+              className="clear-collection-button"
+              onClick={handleClearCollection}
+              title="Clear entire collection"
+            >
+              <FiRefreshCw />
+              Clear Collection
+            </button>
+          </div>
+        )}
       </div>
       
       <div className="collection-grid">
@@ -119,7 +172,7 @@ export const SheetMusicCollection: React.FC = () => {
                 
                 <div className="metadata-item">
                   <FiCalendar className="metadata-icon" />
-                  <span>{formatDate(new Date(sheetMusic.createdAt))}</span>
+                  <span>{formatDate(sheetMusic.createdAt)}</span>
                 </div>
               </div>
               

@@ -247,6 +247,29 @@ export class MusicNotationParser {
     return measure ? measure.number : 1
   }
 
+  static getPlaybackPosition(sequence: MusicSequence, currentTime: number, tempo: number): {
+    measure: number
+    beatInMeasure: number
+    measureProgress: number
+    totalProgress: number
+  } {
+    const beatsPerSecond = tempo / 60
+    const beatTime = currentTime * beatsPerSecond
+    const currentMeasure = this.getCurrentMeasure(sequence, currentTime)
+    
+    const measureStart = (currentMeasure - 1) * 4
+    const beatInMeasure = beatTime - measureStart
+    const measureProgress = Math.max(0, Math.min(1, beatInMeasure / 4))
+    const totalProgress = beatTime / sequence.totalDuration
+    
+    return {
+      measure: currentMeasure,
+      beatInMeasure: Math.max(1, Math.min(4, Math.ceil(beatInMeasure))),
+      measureProgress,
+      totalProgress: Math.max(0, Math.min(1, totalProgress))
+    }
+  }
+
   static getUpcomingNotes(sequence: MusicSequence, currentTime: number, lookahead: number = 2): MusicNote[] {
     const upcomingNotes: MusicNote[] = []
     

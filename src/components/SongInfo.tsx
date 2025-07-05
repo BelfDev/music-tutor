@@ -9,7 +9,8 @@ export const SongInfo: React.FC = () => {
     currentMeasure,
     currentTime,
     totalDuration,
-    isPlaying 
+    isPlaying,
+    audioEngine
   } = useAppStore()
 
   if (!currentSheetMusic) {
@@ -73,6 +74,12 @@ export const SongInfo: React.FC = () => {
             <label>Measure:</label>
             <span className="position-value">{currentMeasure}</span>
           </div>
+          {isPlaying && (
+            <div className="position-item">
+              <label>Beat:</label>
+              <span className="position-value">{audioEngine.getCurrentBeat(currentTime)}</span>
+            </div>
+          )}
           <div className="position-item">
             <label>Time:</label>
             <span className="position-value">{formatTime(currentTime)}</span>

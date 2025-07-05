@@ -25,12 +25,23 @@ export class FileManager {
   static async saveSheetMusicCollection(collection: SheetMusicItem[]): Promise<void> {
     try {
       const serializedCollection = await Promise.all(
-        collection.map(async (item) => ({
-          ...item,
-          file: await this.fileToBase64(item.file),
-          createdAt: item.createdAt.toISOString(),
-          lastPlayed: item.lastPlayed?.toISOString()
-        }))
+        collection.map(async (item) => {
+          // Ensure dates are valid before serializing
+          const createdAt = item.createdAt instanceof Date && !isNaN(item.createdAt.getTime()) 
+            ? item.createdAt 
+            : new Date()
+          
+          const lastPlayed = item.lastPlayed instanceof Date && !isNaN(item.lastPlayed.getTime()) 
+            ? item.lastPlayed 
+            : undefined
+
+          return {
+            ...item,
+            file: await this.fileToBase64(item.file),
+            createdAt: createdAt.toISOString(),
+            lastPlayed: lastPlayed?.toISOString()
+          }
+        })
       )
       
       localStorage.setItem(
@@ -51,23 +62,63 @@ export class FileManager {
 
       const serializedCollection = JSON.parse(stored)
       
+      // Validate the data structure
+      if (!Array.isArray(serializedCollection)) {
+        console.warn('Invalid collection format in localStorage, clearing...')
+        this.clearSheetMusicCollection()
+        return []
+      }
+      
       const collection = await Promise.all(
         serializedCollection.map(async (item: any) => {
+          // Validate required fields
+          if (!item.id || !item.name || !item.file) {
+            console.warn('Invalid item in collection, skipping:', item)
+            return null
+          }
+          
           const file = await this.base64ToFile(item.file, item.name)
+          
+          // Safely parse dates
+          let createdAt: Date
+          try {
+            createdAt = new Date(item.createdAt)
+            if (isNaN(createdAt.getTime())) {
+              createdAt = new Date()
+            }
+          } catch {
+            createdAt = new Date()
+          }
+          
+          let lastPlayed: Date | undefined
+          if (item.lastPlayed) {
+            try {
+              lastPlayed = new Date(item.lastPlayed)
+              if (isNaN(lastPlayed.getTime())) {
+                lastPlayed = undefined
+              }
+            } catch {
+              lastPlayed = undefined
+            }
+          }
+          
           const sheetMusic: SheetMusicItem = {
             ...item,
             file,
-            createdAt: new Date(item.createdAt),
-            lastPlayed: item.lastPlayed ? new Date(item.lastPlayed) : undefined
+            createdAt,
+            lastPlayed
           }
           
           return sheetMusic
         })
       )
       
-      return collection
+      // Filter out null items (invalid entries)
+      return collection.filter(item => item !== null) as SheetMusicItem[]
     } catch (error) {
       console.error('Failed to load sheet music collection:', error)
+      console.log('Clearing corrupted localStorage data...')
+      this.clearSheetMusicCollection()
       return []
     }
   }
@@ -178,5 +229,15 @@ export class FileManager {
   // Update sheet music collection in storage
   static async updateSheetMusicCollection(collection: SheetMusicItem[]): Promise<void> {
     await this.saveSheetMusicCollection(collection)
+  }
+
+  // Clear corrupted localStorage data
+  static clearSheetMusicCollection(): void {
+    try {
+      localStorage.removeItem(this.SHEET_MUSIC_STORAGE_KEY)
+      console.log('Sheet music collection localStorage cleared')
+    } catch (error) {
+      console.error('Failed to clear localStorage:', error)
+    }
   }
 }

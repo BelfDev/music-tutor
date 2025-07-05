@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Note } from '../store/useAppStore'
+import { useAppStore } from '../store/useAppStore'
 import { AudioEngine } from '../utils/audioEngine'
 import './PianoKeyboard.scss'
 
@@ -40,7 +40,8 @@ const generateFullKeyboard = () => {
 }
 
 export const PianoKeyboard: React.FC = () => {
-  const [activeNotes, setActiveNotes] = useState<Note[]>([])
+  const { activeNotes, isPlaying } = useAppStore()
+  const [manualActiveNotes, setManualActiveNotes] = useState<{ midi: number; frequency: number }[]>([])
   const [showLetterNotation, setShowLetterNotation] = useState(true)
   
   const audioEngineRef = useRef<AudioEngine | null>(null)
@@ -56,43 +57,47 @@ export const PianoKeyboard: React.FC = () => {
   }, [])
 
   const handleKeyPress = (key: typeof keys[0]) => {
-    const note: Note = {
-      name: key.note,
-      frequency: 440 * Math.pow(2, (key.midi - 69) / 12), // A4 = 440Hz
-      octave: key.octave,
-      midi: key.midi
-    }
+    const frequency = 440 * Math.pow(2, (key.midi - 69) / 12) // A4 = 440Hz
     
-    // Add to active notes if not already there
-    setActiveNotes(prev => {
-      if (!prev.some(n => n.midi === note.midi)) {
-        return [...prev, note]
+    // Add to manual active notes if not already there
+    setManualActiveNotes(prev => {
+      if (!prev.some(n => n.midi === key.midi)) {
+        return [...prev, { midi: key.midi, frequency }]
       }
       return prev
     })
     
-    audioEngineRef.current?.playNote(note.frequency)
+    audioEngineRef.current?.playNote(frequency)
   }
 
   const handleKeyRelease = (key: typeof keys[0]) => {
-    const note: Note = {
-      name: key.note,
-      frequency: 440 * Math.pow(2, (key.midi - 69) / 12),
-      octave: key.octave,
-      midi: key.midi
-    }
-    
-    // Remove from active notes
-    setActiveNotes(prev => prev.filter(n => n.midi !== note.midi))
+    // Remove from manual active notes
+    setManualActiveNotes(prev => prev.filter(n => n.midi !== key.midi))
     
     // Stop the note (if the audio engine supports it)
+    const frequency = 440 * Math.pow(2, (key.midi - 69) / 12)
     if (audioEngineRef.current && 'stopNote' in audioEngineRef.current) {
-      (audioEngineRef.current as any).stopNote(note.frequency)
+      (audioEngineRef.current as any).stopNote(frequency)
     }
   }
 
   const isKeyActive = (midi: number) => {
-    return activeNotes.some(note => note.midi === midi)
+    // Check if key is active from playback
+    const playbackActive = isPlaying && activeNotes.some(note => note.midi === midi)
+    // Check if key is manually pressed
+    const manualActive = manualActiveNotes.some(note => note.midi === midi)
+    
+    return playbackActive || manualActive
+  }
+
+  const getKeyHighlightClass = (midi: number) => {
+    const playbackActive = isPlaying && activeNotes.some(note => note.midi === midi)
+    const manualActive = manualActiveNotes.some(note => note.midi === midi)
+    
+    if (playbackActive && manualActive) return 'active playback manual'
+    if (playbackActive) return 'active playback'
+    if (manualActive) return 'active manual'
+    return ''
   }
 
   return (
@@ -105,7 +110,7 @@ export const PianoKeyboard: React.FC = () => {
               className={`
                 piano-key 
                 ${key.type} 
-                ${isKeyActive(key.midi) ? 'active' : ''}
+                ${getKeyHighlightClass(key.midi)}
               `}
               onMouseDown={() => handleKeyPress(key)}
               onMouseUp={() => handleKeyRelease(key)}

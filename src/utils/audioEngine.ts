@@ -265,7 +265,31 @@ export class AudioEngine {
       }
     }
 
-    return 1
+    // If we're past all measures, return the last measure
+    return Math.min(this.currentSequence.totalMeasures, Math.max(1, Math.ceil(beatTime / 4)))
+  }
+
+  // Get the current beat within the current measure
+  getCurrentBeat(time: number): number {
+    if (!this.currentSequence) return 1
+
+    const beatsPerSecond = this.config.tempo / 60
+    const beatTime = time * beatsPerSecond
+    const currentMeasure = this.getCurrentMeasure(time)
+    const measureStart = (currentMeasure - 1) * 4
+    const beatInMeasure = beatTime - measureStart
+    
+    return Math.max(1, Math.min(4, Math.ceil(beatInMeasure)))
+  }
+
+  // Get precise playback position as percentage
+  getPlaybackPosition(): number {
+    if (!this.currentSequence) return 0
+    
+    const currentTime = this.getCurrentTime()
+    const duration = this.getDuration()
+    
+    return duration > 0 ? (currentTime / duration) * 100 : 0
   }
 
   // Play a single note (for testing/preview)

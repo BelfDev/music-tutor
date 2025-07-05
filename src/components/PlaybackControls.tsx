@@ -172,6 +172,11 @@ export const PlaybackControls: React.FC = () => {
           
           <div className="measure-display">
             <span>Measure {currentMeasure} / {currentMusicSequence.totalMeasures}</span>
+            {isPlaying && (
+              <span className="beat-display">
+                Beat {audioEngine.getCurrentBeat(currentTime)}
+              </span>
+            )}
           </div>
         </div>
       </div>

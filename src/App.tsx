@@ -33,13 +33,25 @@ const App: React.FC = () => {
         
         // Load existing collection from local storage
         console.log('Loading saved collection...')
-        const savedCollection = await FileManager.loadSheetMusicCollection()
-        console.log('Saved collection loaded:', savedCollection.length, 'items')
+        let savedCollection: any[] = []
+        try {
+          savedCollection = await FileManager.loadSheetMusicCollection()
+          console.log('Saved collection loaded:', savedCollection.length, 'items')
+        } catch (error) {
+          console.error('Failed to load saved collection, continuing with empty collection:', error)
+          // Clear corrupted data
+          localStorage.removeItem('sheetMusicCollection')
+        }
         
         // Try to load sheet music from the sheet_music folder
         console.log('Loading folder files...')
-        const folderFiles = await FileManager.loadSheetMusicFromFolder()
-        console.log('Folder files loaded:', folderFiles.length, 'items')
+        let folderFiles: any[] = []
+        try {
+          folderFiles = await FileManager.loadSheetMusicFromFolder()
+          console.log('Folder files loaded:', folderFiles.length, 'items')
+        } catch (error) {
+          console.error('Failed to load folder files, continuing without them:', error)
+        }
         
         // Merge collections, avoiding duplicates
         const mergedCollection = [...savedCollection]
@@ -52,10 +64,16 @@ const App: React.FC = () => {
         console.log('Loading collection into store:', mergedCollection.length, 'items')
         loadSheetMusicCollection(mergedCollection)
         
-        // Save the merged collection
+        // Save the merged collection if we have items and no errors occurred
         if (mergedCollection.length > 0) {
-          console.log('Saving merged collection...')
-          await FileManager.saveSheetMusicCollection(mergedCollection)
+          try {
+            console.log('Saving merged collection...')
+            await FileManager.saveSheetMusicCollection(mergedCollection)
+            console.log('Collection saved successfully')
+          } catch (error) {
+            console.error('Failed to save merged collection:', error)
+            setError('Collection loaded but could not be saved. Changes may not persist.')
+          }
         }
         
         console.log('App initialization completed successfully')

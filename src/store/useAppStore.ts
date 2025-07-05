@@ -47,6 +47,7 @@ export interface AppState {
   currentBar: number
   currentMeasure: number
   playbackProgress: number
+  activeNotes: Note[]
   
   // Audio engine
   audioEngine: AudioEngine
@@ -78,6 +79,7 @@ export interface AppState {
   setCurrentTime: (time: number) => void
   setCurrentBar: (bar: number) => void
   setCurrentMeasure: (measure: number) => void
+  setActiveNotes: (notes: Note[]) => void
   
   // UI actions
   setIsLoading: (loading: boolean) => void
@@ -105,6 +107,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentBar: 0,
   currentMeasure: 1,
   playbackProgress: 0,
+  activeNotes: [],
   
   audioEngine: new AudioEngine(),
   
@@ -179,11 +182,21 @@ export const useAppStore = create<AppState>((set, get) => ({
         const progress = state.totalDuration > 0 ? (currentTime / state.totalDuration) * 100 : 0
         const currentMeasure = state.audioEngine.getCurrentMeasure(currentTime)
         
+        // Get active notes at current time
+        const activeNotes = state.audioEngine.getActiveNotes(currentTime)
+        const storeNotes: Note[] = activeNotes.map(musicNote => ({
+          name: musicNote.pitch.replace(/[0-9]/g, ''), // Remove octave number
+          frequency: musicNote.frequency,
+          octave: parseInt(musicNote.pitch.match(/[0-9]/)?.[0] || '4'),
+          midi: musicNote.midi
+        }))
+        
         set({ 
           currentTime,
           playbackProgress: progress,
           currentMeasure,
-          currentBar: currentMeasure
+          currentBar: currentMeasure,
+          activeNotes: storeNotes
         })
       })
     } catch (error) {
@@ -195,7 +208,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   pause: () => {
     const state = get()
     state.audioEngine.pause()
-    set({ isPlaying: false, isPaused: true })
+    set({ isPlaying: false, isPaused: true, activeNotes: [] })
   },
   
   stop: () => {
@@ -207,7 +220,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentTime: 0, 
       playbackProgress: 0,
       currentBar: 0,
-      currentMeasure: 1
+      currentMeasure: 1,
+      activeNotes: []
     })
   },
   
@@ -241,6 +255,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   setCurrentBar: (bar) => set({ currentBar: bar }),
   setCurrentMeasure: (measure) => set({ currentMeasure: measure }),
+  
+  setActiveNotes: (notes) => set({ activeNotes: notes }),
   
   // UI actions
   setIsLoading: (loading) => set({ isLoading: loading }),

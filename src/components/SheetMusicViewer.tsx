@@ -16,7 +16,7 @@ export const SheetMusicViewer: React.FC = () => {
   } = useAppStore()
   
   const [zoom, setZoom] = useState(1.0)
-  const [focusedSection, setFocusedSection] = useState({ start: 1, end: 4 })
+  const [focusedSection, setFocusedSection] = useState({ start: 1, end: 8 })
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
 
@@ -25,9 +25,10 @@ export const SheetMusicViewer: React.FC = () => {
     if (isPlaying && currentMusicSequence) {
       const currentMeasure = MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime)
       
-      // Show 4 measures at a time, centered around current measure
-      const sectionStart = Math.max(1, currentMeasure - 1)
-      const sectionEnd = Math.min(currentMusicSequence.totalMeasures, sectionStart + 3)
+      // Show 8 measures at a time, starting from measure groups (1-8, 9-16, etc.)
+      const sectionNumber = Math.ceil(currentMeasure / 8)
+      const sectionStart = (sectionNumber - 1) * 8 + 1
+      const sectionEnd = Math.min(currentMusicSequence.totalMeasures, sectionStart + 7)
       
       setFocusedSection({ start: sectionStart, end: sectionEnd })
     }
@@ -75,15 +76,15 @@ export const SheetMusicViewer: React.FC = () => {
   const nextSection = () => {
     if (currentMusicSequence && focusedSection.end < currentMusicSequence.totalMeasures) {
       const newStart = focusedSection.end + 1
-      const newEnd = Math.min(currentMusicSequence.totalMeasures, newStart + 3)
+      const newEnd = Math.min(currentMusicSequence.totalMeasures, newStart + 7)
       setFocusedSection({ start: newStart, end: newEnd })
     }
   }
 
   const prevSection = () => {
     if (focusedSection.start > 1) {
-      const newStart = Math.max(1, focusedSection.start - 4)
-      const newEnd = newStart + 3
+      const newStart = Math.max(1, focusedSection.start - 8)
+      const newEnd = newStart + 7
       setFocusedSection({ start: newStart, end: newEnd })
     }
   }
@@ -92,7 +93,11 @@ export const SheetMusicViewer: React.FC = () => {
     return (
       <div className="sheet-music-viewer">
         <div className="no-music">
-          <p>No sheet music loaded</p>
+          <div className="no-music-content">
+            <div className="icon">🎼</div>
+            <h3>No Sheet Music Selected</h3>
+            <p>Upload a PDF or select from your collection to get started</p>
+          </div>
         </div>
       </div>
     )
@@ -182,12 +187,29 @@ export const SheetMusicViewer: React.FC = () => {
         <div className="current-measure-indicator">
           {isPlaying && currentMusicSequence && (
             <div className="measure-progress">
-              <span>Current: Measure {MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime)}</span>
+              <span>
+                Current: Measure {MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime)}
+                {(() => {
+                  const position = MusicNotationParser.getPlaybackPosition(
+                    currentMusicSequence, 
+                    currentTime, 
+                    currentMusicSequence.metadata.tempo || 120
+                  )
+                  return ` • Beat ${position.beatInMeasure}`
+                })()}
+              </span>
               <div className="progress-bar">
                 <div 
                   className="progress-fill"
                   style={{ 
-                    width: `${(currentTime / currentMusicSequence.totalDuration) * 100}%` 
+                    width: `${(() => {
+                      const position = MusicNotationParser.getPlaybackPosition(
+                        currentMusicSequence, 
+                        currentTime, 
+                        currentMusicSequence.metadata.tempo || 120
+                      )
+                      return position.totalProgress * 100
+                    })()}%`
                   }}
                 />
               </div>
@@ -205,36 +227,89 @@ export const SheetMusicViewer: React.FC = () => {
             className="sheet-music-image"
           />
           
+          {/* Focused section overlay */}
+          <div className="focused-section-overlay">
+            <div className="section-crop" />
+            
+            {/* Measure indicators for the current 8-measure section */}
+            <div className="measure-indicators">
+              {Array.from({ length: Math.min(8, focusedSection.end - focusedSection.start + 1) }, (_, i) => {
+                const measureNum = focusedSection.start + i
+                const isCurrent = isPlaying && currentMusicSequence && 
+                  MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime) === measureNum
+                return (
+                  <div 
+                    key={measureNum}
+                    className={`measure-marker ${isCurrent ? 'current' : ''}`}
+                  >
+                    {measureNum}
+                  </div>
+                )
+              })}
+            </div>
+            
+            {/* Section navigation buttons */}
+            <div className="section-focus-controls">
+              {currentMusicSequence && Array.from({ length: Math.ceil(currentMusicSequence.totalMeasures / 8) }, (_, i) => {
+                const sectionStart = i * 8 + 1
+                const sectionEnd = Math.min(currentMusicSequence.totalMeasures, sectionStart + 7)
+                const isActive = focusedSection.start === sectionStart
+                return (
+                  <button
+                    key={i}
+                    className={`section-button ${isActive ? 'active' : ''}`}
+                    onClick={() => setFocusedSection({ start: sectionStart, end: sectionEnd })}
+                  >
+                    {sectionStart}-{sectionEnd}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          
           {/* Overlay for highlighting current section */}
           {isPlaying && currentMusicSequence && (
             <div className="playback-overlay">
-              <div 
-                className="current-section-highlight"
-                style={{
-                  left: '10%',
-                  width: '80%',
-                  top: `${((MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime) - 1) / currentMusicSequence.totalMeasures) * 80 + 10}%`,
-                  height: '8%'
-                }}
-              />
+              {(() => {
+                const position = MusicNotationParser.getPlaybackPosition(
+                  currentMusicSequence, 
+                  currentTime, 
+                  currentMusicSequence.metadata.tempo || 120
+                )
+                
+                return (
+                  <>
+                    {/* Current measure highlight (subtle background) */}
+                    <div 
+                      className="current-measure-highlight"
+                      style={{
+                        left: `${((position.measure - 1) / currentMusicSequence.totalMeasures) * 100}%`,
+                        width: `${100 / currentMusicSequence.totalMeasures}%`,
+                        top: '20%',
+                        height: '60%'
+                      }}
+                    />
+                    
+                    {/* Horizontal playback position bar - moves left to right */}
+                    <div 
+                      className="playback-position-bar horizontal"
+                      style={{
+                        left: `${(() => {
+                          const measureWidth = 100 / currentMusicSequence.totalMeasures
+                          const measureLeft = ((position.measure - 1) / currentMusicSequence.totalMeasures) * 100
+                          return measureLeft + (position.measureProgress * measureWidth)
+                        })()}%`,
+                        top: '15%',
+                        width: '3px',
+                        height: '70%'
+                      }}
+                    />
+                  </>
+                )
+              })()}
             </div>
           )}
         </div>
-        
-        {/* Upcoming notes preview */}
-        {isPlaying && currentMusicSequence && (
-          <div className="upcoming-notes">
-            <h4>Next Notes:</h4>
-            <div className="note-list">
-              {MusicNotationParser.getUpcomingNotes(currentMusicSequence, currentTime, 2).slice(0, 4).map((note, index) => (
-                <div key={index} className="note-preview">
-                  <span className="note-pitch">{note.pitch}</span>
-                  <span className="note-timing">in {(note.startTime - currentTime).toFixed(1)}s</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

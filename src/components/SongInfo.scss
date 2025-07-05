@@ -1,134 +1,225 @@
 // SongInfo component styles
 .song-info {
-  background: #2d2d2d;
-  border-radius: 8px;
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  min-height: 120px;
 }
 
 .info-placeholder {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   color: #666;
-  font-size: 0.9rem;
+  font-style: italic;
+  height: 100%;
+  
+  .icon {
+    font-size: 1.2rem;
+  }
 }
 
 .song-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  
   .song-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    gap: 0.75rem;
     
     .icon {
       color: #4a90e2;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
     }
     
     h2 {
       margin: 0;
-      font-size: 1.3rem;
-      color: #fff;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #2d2d2d;
     }
   }
   
-  .song-composer {
+  .song-artist {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #ccc;
+    margin-left: 2rem;
     
     .icon {
+      color: #666;
       font-size: 1rem;
+    }
+    
+    span {
+      color: #666;
+      font-size: 0.95rem;
     }
   }
 }
 
 .song-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
   
-  label {
-    color: #999;
-    font-size: 0.9rem;
-  }
-  
-  span {
-    color: #fff;
-    font-weight: 500;
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    span {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #333;
+      
+      &.difficulty {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        
+        &.beginner {
+          color: #28a745;
+        }
+        
+        &.intermediate {
+          color: #ffc107;
+        }
+        
+        &.advanced {
+          color: #fd7e14;
+        }
+        
+        &.professional {
+          color: #dc3545;
+        }
+      }
+    }
   }
 }
 
 .playback-info {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1rem;
+  
   h3 {
     margin: 0 0 0.75rem 0;
     font-size: 1rem;
-    color: #ccc;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .position-display {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    
+    .position-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      
+      label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      
+      .position-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #4a90e2;
+        font-family: 'Courier New', monospace;
+      }
+    }
+  }
+  
+  .playback-status {
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      
+      .icon {
+        font-size: 1rem;
+      }
+      
+      &.playing {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+        border: 1px solid rgba(40, 167, 69, 0.3);
+      }
+      
+      &.paused {
+        background: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+        border: 1px solid rgba(108, 117, 125, 0.3);
+      }
+    }
   }
 }
 
-.position-display {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.position-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  
-  label {
-    color: #999;
-    font-size: 0.85rem;
+// Responsive design
+@media (max-width: 768px) {
+  .song-header {
+    .song-title {
+      h2 {
+        font-size: 1.2rem;
+      }
+    }
+    
+    .song-artist {
+      margin-left: 1.5rem;
+    }
   }
   
-  .position-value {
-    background: #3a3a3a;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-weight: 500;
-    font-size: 0.9rem;
+  .song-details {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .playback-info {
+    .position-display {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 }
 
-.playback-status {
-  display: flex;
-  justify-content: center;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  
-  .icon {
-    font-size: 1rem;
+@media (max-width: 480px) {
+  .song-info {
+    padding: 0.75rem;
   }
   
-  &.playing {
-    background: #7ed321;
-    color: #000;
+  .song-details {
+    grid-template-columns: 1fr;
   }
   
-  &.paused {
-    background: #f5a623;
-    color: #000;
+  .playback-info {
+    .position-display {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 }

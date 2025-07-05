@@ -11,9 +11,10 @@ html, body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #1a1a1a;
-  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #333333;
   line-height: 1.6;
+  min-height: 100vh;
 }
 
 #root {
@@ -28,16 +29,16 @@ html, body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #2d2d2d;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #555;
+  background: rgba(255, 255, 255, 0.3);
   border-radius: 4px;
   
   &:hover {
-    background: #777;
+    background: rgba(255, 255, 255, 0.5);
   }
 }
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { FiArrowLeft, FiChevronLeft, FiChevronRight, FiZoomIn, FiZoomOut } from 'react-icons/fi'
 import { useAppStore } from '../store/useAppStore'
+import { MusicNotationParser } from '../utils/musicNotationParser'
 import './SheetMusicViewer.scss'
 
 export const SheetMusicViewer: React.FC = () => {
@@ -9,20 +10,43 @@ export const SheetMusicViewer: React.FC = () => {
     currentPage, 
     setCurrentPage, 
     isPlaying, 
-    currentBar,
+    currentTime,
+    currentMusicSequence,
     setCurrentSheetMusic 
   } = useAppStore()
+  
   const [zoom, setZoom] = useState(1.0)
+  const [focusedSection, setFocusedSection] = useState({ start: 1, end: 4 })
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Auto-scroll based on current bar when playing
-    if (isPlaying && pageRef.current) {
-      const scrollPercentage = (currentBar / 100) * 100 // Simplified calculation
-      pageRef.current.scrollTop = (pageRef.current.scrollHeight * scrollPercentage) / 100
+    // Update focused section based on current playback position
+    if (isPlaying && currentMusicSequence) {
+      const currentMeasure = MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime)
+      
+      // Show 4 measures at a time, centered around current measure
+      const sectionStart = Math.max(1, currentMeasure - 1)
+      const sectionEnd = Math.min(currentMusicSequence.totalMeasures, sectionStart + 3)
+      
+      setFocusedSection({ start: sectionStart, end: sectionEnd })
     }
-  }, [isPlaying, currentBar])
+  }, [isPlaying, currentTime, currentMusicSequence])
+
+  useEffect(() => {
+    // Auto-scroll to current section when playing
+    if (isPlaying && pageRef.current && currentMusicSequence) {
+      const currentMeasure = MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime)
+      const progressPercentage = (currentMeasure / currentMusicSequence.totalMeasures) * 100
+      
+      // Smooth scroll to current position
+      const scrollTop = (pageRef.current.scrollHeight * progressPercentage) / 100
+      pageRef.current.scrollTo({
+        top: scrollTop,
+        behavior: 'smooth'
+      })
+    }
+  }, [isPlaying, currentTime, currentMusicSequence])
 
   const nextPage = () => {
     if (currentPage < sheetMusicPages.length - 1) {
@@ -48,6 +72,22 @@ export const SheetMusicViewer: React.FC = () => {
     setCurrentSheetMusic(null)
   }
 
+  const nextSection = () => {
+    if (currentMusicSequence && focusedSection.end < currentMusicSequence.totalMeasures) {
+      const newStart = focusedSection.end + 1
+      const newEnd = Math.min(currentMusicSequence.totalMeasures, newStart + 3)
+      setFocusedSection({ start: newStart, end: newEnd })
+    }
+  }
+
+  const prevSection = () => {
+    if (focusedSection.start > 1) {
+      const newStart = Math.max(1, focusedSection.start - 4)
+      const newEnd = newStart + 3
+      setFocusedSection({ start: newStart, end: newEnd })
+    }
+  }
+
   if (!sheetMusicPages.length) {
     return (
       <div className="sheet-music-viewer">
@@ -71,21 +111,45 @@ export const SheetMusicViewer: React.FC = () => {
           </button>
         </div>
         
+        <div className="section-controls">
+          <button
+            className="control-button"
+            onClick={prevSection}
+            disabled={focusedSection.start <= 1}
+            title="Previous Section"
+          >
+            <FiChevronLeft />
+          </button>
+          <span className="section-info">
+            Measures {focusedSection.start}-{focusedSection.end}
+          </span>
+          <button
+            className="control-button"
+            onClick={nextSection}
+            disabled={!currentMusicSequence || focusedSection.end >= currentMusicSequence.totalMeasures}
+            title="Next Section"
+          >
+            <FiChevronRight />
+          </button>
+        </div>
+        
         <div className="page-controls">
           <button
             className="control-button"
             onClick={prevPage}
             disabled={currentPage === 0}
+            title="Previous Page"
           >
             <FiChevronLeft />
           </button>
           <span className="page-info">
-            {currentPage + 1} / {sheetMusicPages.length}
+            Page {currentPage + 1} / {sheetMusicPages.length}
           </span>
           <button
             className="control-button"
             onClick={nextPage}
             disabled={currentPage === sheetMusicPages.length - 1}
+            title="Next Page"
           >
             <FiChevronRight />
           </button>
@@ -96,6 +160,7 @@ export const SheetMusicViewer: React.FC = () => {
             className="control-button"
             onClick={zoomOut}
             disabled={zoom <= 0.5}
+            title="Zoom Out"
           >
             <FiZoomOut />
           </button>
@@ -106,6 +171,7 @@ export const SheetMusicViewer: React.FC = () => {
             className="control-button"
             onClick={zoomIn}
             disabled={zoom >= 2.0}
+            title="Zoom In"
           >
             <FiZoomIn />
           </button>
@@ -113,6 +179,22 @@ export const SheetMusicViewer: React.FC = () => {
       </div>
 
       <div className="sheet-music-content" ref={pageRef}>
+        <div className="current-measure-indicator">
+          {isPlaying && currentMusicSequence && (
+            <div className="measure-progress">
+              <span>Current: Measure {MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime)}</span>
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ 
+                    width: `${(currentTime / currentMusicSequence.totalDuration) * 100}%` 
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        
         <div 
           className="sheet-music-page"
           style={{ transform: `scale(${zoom})` }}
@@ -122,7 +204,37 @@ export const SheetMusicViewer: React.FC = () => {
             alt={`Sheet music page ${currentPage + 1}`}
             className="sheet-music-image"
           />
+          
+          {/* Overlay for highlighting current section */}
+          {isPlaying && currentMusicSequence && (
+            <div className="playback-overlay">
+              <div 
+                className="current-section-highlight"
+                style={{
+                  left: '10%',
+                  width: '80%',
+                  top: `${((MusicNotationParser.getCurrentMeasure(currentMusicSequence, currentTime) - 1) / currentMusicSequence.totalMeasures) * 80 + 10}%`,
+                  height: '8%'
+                }}
+              />
+            </div>
+          )}
         </div>
+        
+        {/* Upcoming notes preview */}
+        {isPlaying && currentMusicSequence && (
+          <div className="upcoming-notes">
+            <h4>Next Notes:</h4>
+            <div className="note-list">
+              {MusicNotationParser.getUpcomingNotes(currentMusicSequence, currentTime, 2).slice(0, 4).map((note, index) => (
+                <div key={index} className="note-preview">
+                  <span className="note-pitch">{note.pitch}</span>
+                  <span className="note-timing">in {(note.startTime - currentTime).toFixed(1)}s</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

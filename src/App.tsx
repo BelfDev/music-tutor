@@ -14,23 +14,32 @@ import { FileManager } from './utils/fileManager'
 
 const App: React.FC = () => {
   const { 
-    currentPDF, 
+    currentSheetMusic,
     sheetMusicCollection, 
     loadSheetMusicCollection, 
     setError, 
-    setIsLoading 
+    setIsLoading,
+    isLoading,
+    error
   } = useAppStore()
 
   useEffect(() => {
     // Load sheet music collection on app startup
     const initializeApp = async () => {
       setIsLoading(true)
+      setError(null)
       try {
+        console.log('Initializing app...')
+        
         // Load existing collection from local storage
+        console.log('Loading saved collection...')
         const savedCollection = await FileManager.loadSheetMusicCollection()
+        console.log('Saved collection loaded:', savedCollection.length, 'items')
         
         // Try to load sheet music from the sheet_music folder
+        console.log('Loading folder files...')
         const folderFiles = await FileManager.loadSheetMusicFromFolder()
+        console.log('Folder files loaded:', folderFiles.length, 'items')
         
         // Merge collections, avoiding duplicates
         const mergedCollection = [...savedCollection]
@@ -40,15 +49,19 @@ const App: React.FC = () => {
           }
         })
         
+        console.log('Loading collection into store:', mergedCollection.length, 'items')
         loadSheetMusicCollection(mergedCollection)
         
         // Save the merged collection
         if (mergedCollection.length > 0) {
+          console.log('Saving merged collection...')
           await FileManager.saveSheetMusicCollection(mergedCollection)
         }
+        
+        console.log('App initialization completed successfully')
       } catch (error) {
         console.error('Failed to initialize app:', error)
-        setError('Failed to load sheet music collection')
+        setError('Failed to load sheet music collection. You can still upload new files.')
       } finally {
         setIsLoading(false)
       }
@@ -57,12 +70,38 @@ const App: React.FC = () => {
     initializeApp()
   }, [loadSheetMusicCollection, setError, setIsLoading])
 
+  if (isLoading) {
+    return (
+      <div className="app">
+        <Header />
+        <main className="main-content">
+          <div className="loading-overlay">
+            <div className="loading-content">
+              <div className="loading-spinner"></div>
+              <div className="loading-text">Loading Music Tutor...</div>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <Header />
       
       <main className="main-content">
-        {!currentPDF ? (
+        {error && (
+          <div className="error-message">
+            <span className="error-icon">⚠️</span>
+            <span className="error-text">{error}</span>
+            <button className="error-close" onClick={() => setError(null)}>
+              ✕
+            </button>
+          </div>
+        )}
+        
+        {!currentSheetMusic ? (
           <div className="start-section">
             <div className="upload-section">
               <PDFUploader />
@@ -75,34 +114,41 @@ const App: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="app-layout">
-            <div className="sheet-music-section">
-              <SheetMusicViewer />
-              
-              {/* Show collection at the bottom when PDF is loaded */}
-              {sheetMusicCollection.length > 1 && (
-                <div className="collection-mini">
-                  <h4>Your Collection</h4>
-                  <SheetMusicCollection />
-                </div>
-              )}
-            </div>
-            
-            <div className="controls-section">
+          <div className="learning-interface">
+            {/* Top section: Song info and controls */}
+            <div className="learning-header">
               <SongInfo />
               <PlaybackControls />
             </div>
             
+            {/* Main learning area: Current section of sheet music */}
+            <div className="current-section">
+              <div className="section-header">
+                <h3>Current Section</h3>
+                <div className="section-info">
+                  <span>Bar 1-4</span>
+                  <span>•</span>
+                  <span>Measure 1</span>
+                </div>
+              </div>
+              <div className="focused-sheet-music">
+                <SheetMusicViewer />
+              </div>
+            </div>
+            
+            {/* Piano section */}
             <div className="piano-section">
               <PianoKeyboard />
             </div>
             
-            <div className="learning-section">
-              <LearningAids />
-            </div>
-            
-            <div className="microphone-section">
-              <MicrophoneInput />
+            {/* Bottom controls */}
+            <div className="learning-controls">
+              <div className="controls-left">
+                <MicrophoneInput />
+              </div>
+              <div className="controls-right">
+                <LearningAids />
+              </div>
             </div>
           </div>
         )}

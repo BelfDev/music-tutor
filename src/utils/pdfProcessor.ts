@@ -76,15 +76,18 @@ export const extractMetadata = async (file: File): Promise<SongMetadata | null> 
     // Extract basic metadata
     const info = metadata.info as any
     const title = info?.Title || file.name.replace('.pdf', '')
-    const composer = info?.Author || 'Unknown'
+    const artist = info?.Author || 'Unknown Artist'
 
     // Default values for music-specific metadata
     const songMetadata: SongMetadata = {
       title,
-      composer,
-      tempo: 120, // Default BPM
+      artist,
+      key: 'C major', // Default key
       timeSignature: '4/4', // Default time signature
-      key: 'C major' // Default key
+      tempo: 120, // Default BPM
+      difficulty: 'Intermediate',
+      genre: 'Classical',
+      duration: 180 // Default 3 minutes
     }
 
     return songMetadata

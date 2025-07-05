@@ -1,5 +1,4 @@
-import { SheetMusicFile } from '../store/useAppStore'
-import { MusicNotationParser } from './musicNotationParser'
+import { SheetMusicItem } from '../store/useAppStore'
 import { extractMetadata, processPDF } from './pdfProcessor'
 
 export class FileManager {
@@ -23,15 +22,14 @@ export class FileManager {
   }
 
   // Save sheet music collection to local storage
-  static async saveSheetMusicCollection(collection: SheetMusicFile[]): Promise<void> {
+  static async saveSheetMusicCollection(collection: SheetMusicItem[]): Promise<void> {
     try {
       const serializedCollection = await Promise.all(
         collection.map(async (item) => ({
           ...item,
           file: await this.fileToBase64(item.file),
-          dateAdded: item.dateAdded.toISOString(),
-          // Don't serialize the musicSequence as it's too large - will be regenerated
-          musicSequence: undefined
+          createdAt: item.createdAt.toISOString(),
+          lastPlayed: item.lastPlayed?.toISOString()
         }))
       )
       
@@ -46,7 +44,7 @@ export class FileManager {
   }
 
   // Load sheet music collection from local storage
-  static async loadSheetMusicCollection(): Promise<SheetMusicFile[]> {
+  static async loadSheetMusicCollection(): Promise<SheetMusicItem[]> {
     try {
       const stored = localStorage.getItem(this.SHEET_MUSIC_STORAGE_KEY)
       if (!stored) return []
@@ -56,22 +54,11 @@ export class FileManager {
       const collection = await Promise.all(
         serializedCollection.map(async (item: any) => {
           const file = await this.base64ToFile(item.file, item.name)
-          const sheetMusic: SheetMusicFile = {
+          const sheetMusic: SheetMusicItem = {
             ...item,
             file,
-            dateAdded: new Date(item.dateAdded)
-          }
-          
-          // Regenerate music sequence
-          if (sheetMusic.metadata) {
-            try {
-              sheetMusic.musicSequence = await MusicNotationParser.parsePDFToMusicSequence(
-                file, 
-                sheetMusic.metadata
-              )
-            } catch (error) {
-              console.warn('Failed to regenerate music sequence for', sheetMusic.name, error)
-            }
+            createdAt: new Date(item.createdAt),
+            lastPlayed: item.lastPlayed ? new Date(item.lastPlayed) : undefined
           }
           
           return sheetMusic
@@ -86,7 +73,7 @@ export class FileManager {
   }
 
   // Add a new sheet music file to collection
-  static async addSheetMusicFile(file: File): Promise<SheetMusicFile> {
+  static async addSheetMusicFile(file: File): Promise<SheetMusicItem> {
     try {
       console.log('FileManager.addSheetMusicFile called with:', file.name)
       const id = this.generateId()
@@ -102,30 +89,23 @@ export class FileManager {
       
       const finalMetadata = metadata || {
         title: file.name.replace('.pdf', ''),
-        composer: 'Unknown',
-        tempo: 120,
+        artist: 'Unknown Artist',
+        key: 'C major',
         timeSignature: '4/4',
-        key: 'C major'
+        tempo: 120,
+        difficulty: 'Intermediate',
+        genre: 'Classical',
+        duration: 180
       }
       console.log('Final metadata:', finalMetadata)
       
-      // Generate music sequence
-      console.log('Generating music sequence...')
-      const musicSequence = await MusicNotationParser.parsePDFToMusicSequence(
-        file, 
-        finalMetadata
-      )
-      console.log('Music sequence generated:', musicSequence)
-      
-      const sheetMusic: SheetMusicFile = {
+      const sheetMusic: SheetMusicItem = {
         id,
-        name: file.name,
+        name: file.name.replace('.pdf', ''),
         file,
         metadata: finalMetadata,
         pages,
-        dateAdded: new Date(),
-        filePath: `sheet_music/${file.name}`,
-        musicSequence
+        createdAt: new Date()
       }
 
       console.log('Sheet music object created:', sheetMusic)
@@ -151,7 +131,7 @@ export class FileManager {
   }
 
   // Load sheet music files from the sheet_music folder on startup
-  static async loadSheetMusicFromFolder(): Promise<SheetMusicFile[]> {
+  static async loadSheetMusicFromFolder(): Promise<SheetMusicItem[]> {
     try {
       // In a real implementation, this would make an API call to list files in the sheet_music folder
       // For demo purposes, we'll check if we have the example file
@@ -164,11 +144,11 @@ export class FileManager {
   }
 
   // Load example sheet music (concerning_hobbits.pdf)
-  static async loadExampleSheetMusic(): Promise<SheetMusicFile[]> {
+  static async loadExampleSheetMusic(): Promise<SheetMusicItem[]> {
     try {
       // In a real implementation, this would fetch the actual file from the server
       // For now, we'll create a placeholder entry
-      const exampleFiles: SheetMusicFile[] = []
+      const exampleFiles: SheetMusicItem[] = []
       
       // Check if we can access the example file
       try {
@@ -191,12 +171,12 @@ export class FileManager {
   }
 
   // Remove a sheet music file
-  static async removeSheetMusicFile(id: string, collection: SheetMusicFile[]): Promise<SheetMusicFile[]> {
+  static async removeSheetMusicFile(id: string, collection: SheetMusicItem[]): Promise<SheetMusicItem[]> {
     return collection.filter(item => item.id !== id)
   }
 
   // Update sheet music collection in storage
-  static async updateSheetMusicCollection(collection: SheetMusicFile[]): Promise<void> {
+  static async updateSheetMusicCollection(collection: SheetMusicItem[]): Promise<void> {
     await this.saveSheetMusicCollection(collection)
   }
 }

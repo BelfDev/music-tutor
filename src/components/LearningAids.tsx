@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { FiSun, FiTarget, FiTrendingUp, FiEye, FiEyeOff } from 'react-icons/fi'
+import React, { useEffect, useState } from 'react'
+import { FiEye, FiEyeOff, FiSun, FiTarget, FiTrendingUp } from 'react-icons/fi'
 import { useAppStore } from '../store/useAppStore'
 import './LearningAids.scss'
 
@@ -7,7 +7,7 @@ const LEARNING_TIPS = [
   {
     id: 1,
     title: "Hand Position",
-    content: "Keep your wrists relaxed and fingers curved. Your hands should be in a natural position over the keys."
+    content: "Keep your wrists relaxed and fingers curved. Imagine holding a small ball in your hand."
   },
   {
     id: 2,
@@ -53,24 +53,22 @@ const PATTERN_RECOGNITION = [
 ]
 
 export const LearningAids: React.FC = () => {
-  const { 
-    showTips, 
-    currentTips,
-    songMetadata,
-    setShowTips,
-    setCurrentTips 
-  } = useAppStore()
-
+  const { currentSheetMusic } = useAppStore()
+  
+  const [showTips, setShowTips] = useState(true)
   const [selectedTip, setSelectedTip] = useState<number | null>(null)
   const [showPatterns, setShowPatterns] = useState(false)
+  const [currentTips, setCurrentTips] = useState<string[]>([])
 
   useEffect(() => {
     // Generate context-specific tips based on song metadata
-    if (songMetadata) {
-      const contextTips = generateContextTips(songMetadata)
+    if (currentSheetMusic?.metadata) {
+      const contextTips = generateContextTips(currentSheetMusic.metadata)
       setCurrentTips(contextTips)
+    } else {
+      setCurrentTips([])
     }
-  }, [songMetadata, setCurrentTips])
+  }, [currentSheetMusic])
 
   const generateContextTips = (metadata: any) => {
     const tips: string[] = []

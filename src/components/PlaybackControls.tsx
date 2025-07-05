@@ -1,273 +1,256 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { FiPause, FiPlay, FiRepeat, FiSkipBack, FiSkipForward, FiSquare } from 'react-icons/fi'
+import React, { useEffect, useState } from 'react'
+import { FiPause, FiPlay, FiSettings, FiSkipBack, FiSkipForward, FiSquare, FiVolume2 } from 'react-icons/fi'
 import { useAppStore } from '../store/useAppStore'
-import { AudioEngine } from '../utils/audioEngine'
-import { MusicNotationParser } from '../utils/musicNotationParser'
 import './PlaybackControls.scss'
 
 export const PlaybackControls: React.FC = () => {
-  const {
-    isPlaying,
-    currentTempo,
-    currentBar,
+  const { 
+    isPlaying, 
+    isPaused,
     currentTime,
+    totalDuration,
+    playbackProgress,
+    currentMeasure,
     currentMusicSequence,
-    loopStart,
-    loopEnd,
-    setIsPlaying,
-    setCurrentTempo,
-    setCurrentTime,
-    setLoopStart,
-    setLoopEnd,
-    setActiveNotes
+    play,
+    pause,
+    stop,
+    seekTo,
+    audioEngine,
+    setCurrentSection,
+    currentSection,
+    practiceMode,
+    setPracticeMode
   } = useAppStore()
 
-  const [isLooping, setIsLooping] = useState(false)
-  const [totalBars, setTotalBars] = useState(0)
-  const audioEngineRef = useRef<AudioEngine | null>(null)
+  const [volume, setVolume] = useState(50)
+  const [tempo, setTempo] = useState(120)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
-    audioEngineRef.current = new AudioEngine()
-    
-    // Set up playback time update callback
-    audioEngineRef.current.setPlaybackTimeUpdateCallback((time: number) => {
-      setCurrentTime(time)
-      
-      // Update active notes based on current playback time
-      if (currentMusicSequence) {
-        const currentNotes = MusicNotationParser.getNotesAtTime(currentMusicSequence, time)
-        const activeNotes = currentNotes.map(note => ({
-          name: note.pitch.replace(/\d+$/, ''),
-          frequency: note.frequency,
-          octave: parseInt(note.pitch.match(/\d+$/)?.[0] || '4'),
-          midi: note.midi
-        }))
-        setActiveNotes(activeNotes)
-      }
-    })
-    
-    return () => {
-      if (audioEngineRef.current) {
-        audioEngineRef.current.dispose()
-      }
-    }
-  }, [setCurrentTime, setActiveNotes, currentMusicSequence])
-
-  useEffect(() => {
-    // Load music sequence when it changes
-    if (currentMusicSequence && audioEngineRef.current) {
-      audioEngineRef.current.loadMusicSequence(currentMusicSequence)
-      setTotalBars(MusicNotationParser.getTotalBars(currentMusicSequence))
+    if (currentMusicSequence) {
+      setTempo(currentMusicSequence.metadata.tempo)
     }
   }, [currentMusicSequence])
 
-  useEffect(() => {
-    // Update tempo in audio engine
-    if (audioEngineRef.current) {
-      audioEngineRef.current.setTempo(currentTempo)
-    }
-  }, [currentTempo])
-
-  useEffect(() => {
-    // Update loop settings
-    if (audioEngineRef.current) {
-      audioEngineRef.current.setLoop(loopStart, loopEnd)
-    }
-  }, [loopStart, loopEnd])
-
   const handlePlay = async () => {
-    if (!audioEngineRef.current) return
+    if (!currentMusicSequence) return
     
-    if (isPlaying) {
-      audioEngineRef.current.pausePlayback()
-      setIsPlaying(false)
-    } else {
-      if (currentMusicSequence) {
-        audioEngineRef.current.resumePlayback()
-      } else {
-        audioEngineRef.current.startPlayback()
-      }
-      setIsPlaying(true)
+    try {
+      await play()
+    } catch (error) {
+      console.error('Failed to start playback:', error)
     }
+  }
+
+  const handlePause = () => {
+    pause()
   }
 
   const handleStop = () => {
-    if (!audioEngineRef.current) return
+    stop()
+  }
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const progress = parseFloat(e.target.value)
+    const time = (progress / 100) * totalDuration
+    seekTo(time)
+  }
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseInt(e.target.value)
+    setVolume(newVolume)
+    audioEngine.setVolume(newVolume / 100)
+  }
+
+  const handleTempoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTempo = parseInt(e.target.value)
+    setTempo(newTempo)
+    audioEngine.setTempo(newTempo)
+  }
+
+  const jumpToMeasure = (measure: number) => {
+    if (!currentMusicSequence) return
     
-    audioEngineRef.current.stopPlayback()
-    setIsPlaying(false)
-    setCurrentTime(0)
+    // Calculate time based on measure (assuming 4/4 time)
+    const beatsPerMeasure = 4
+    const beatsPerSecond = tempo / 60
+    const time = ((measure - 1) * beatsPerMeasure) / beatsPerSecond
+    
+    seekTo(time)
+    
+    // Update current section to center around the jumped measure
+    const sectionStart = Math.max(1, measure - 1)
+    const sectionEnd = Math.min(currentMusicSequence.totalMeasures, sectionStart + 3)
+    setCurrentSection({ start: sectionStart, end: sectionEnd })
   }
 
-  const handleTempoChange = (tempo: number) => {
-    setCurrentTempo(tempo)
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = Math.floor(seconds % 60)
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
-  const handleSkipBack = () => {
-    const newTime = Math.max(0, currentTime - 4) // Skip back one bar
-    setCurrentTime(newTime)
-    if (audioEngineRef.current) {
-      audioEngineRef.current.seekToTime(newTime)
-    }
-  }
-
-  const handleSkipForward = () => {
-    const maxTime = currentMusicSequence?.totalDuration || 0
-    const newTime = Math.min(maxTime, currentTime + 4) // Skip forward one bar
-    setCurrentTime(newTime)
-    if (audioEngineRef.current) {
-      audioEngineRef.current.seekToTime(newTime)
-    }
-  }
-
-  const handleSetLoopStart = () => {
-    setLoopStart(loopStart === currentBar ? null : currentBar)
-  }
-
-  const handleSetLoopEnd = () => {
-    setLoopEnd(loopEnd === currentBar ? null : currentBar)
-  }
-
-  const toggleLoop = () => {
-    setIsLooping(!isLooping)
-    if (!isLooping) {
-      // Enable loop mode
-      if (loopStart === null) setLoopStart(currentBar)
-      if (loopEnd === null) setLoopEnd(Math.min(currentBar + 4, totalBars))
-    } else {
-      // Disable loop mode
-      setLoopStart(null)
-      setLoopEnd(null)
-    }
-  }
-
-  const formatTime = (timeInBeats: number) => {
-    const totalSeconds = (timeInBeats / currentTempo) * 60
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = Math.floor(totalSeconds % 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
-
-  const getProgressPercentage = () => {
-    if (!currentMusicSequence) return 0
-    return (currentTime / currentMusicSequence.totalDuration) * 100
+  if (!currentMusicSequence) {
+    return (
+      <div className="playback-controls">
+        <div className="controls-disabled">
+          <p>Load sheet music to enable playback</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="playback-controls">
-      <div className="control-group">
-        <h3>Playback</h3>
+      <div className="main-controls">
         <div className="transport-controls">
           <button
             className="control-button"
-            onClick={handleSkipBack}
-            title="Previous Bar"
-            disabled={!currentMusicSequence}
-          >
-            <FiSkipBack />
-          </button>
-          
-          <button
-            className="control-button primary"
-            onClick={handlePlay}
-            title={isPlaying ? 'Pause' : 'Play'}
-            disabled={!currentMusicSequence}
-          >
-            {isPlaying ? <FiPause /> : <FiPlay />}
-          </button>
-          
-          <button
-            className="control-button"
             onClick={handleStop}
+            disabled={!isPlaying && !isPaused}
             title="Stop"
-            disabled={!currentMusicSequence}
           >
             <FiSquare />
           </button>
           
           <button
-            className="control-button"
-            onClick={handleSkipForward}
-            title="Next Bar"
-            disabled={!currentMusicSequence}
+            className="control-button skip-button"
+            onClick={() => jumpToMeasure(Math.max(1, currentMeasure - 4))}
+            disabled={currentMeasure <= 1}
+            title="Previous Section"
+          >
+            <FiSkipBack />
+          </button>
+          
+          <button
+            className="control-button play-button"
+            onClick={isPlaying ? handlePause : handlePlay}
+            title={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? <FiPause /> : <FiPlay />}
+          </button>
+          
+          <button
+            className="control-button skip-button"
+            onClick={() => jumpToMeasure(Math.min(currentMusicSequence.totalMeasures, currentMeasure + 4))}
+            disabled={currentMeasure >= currentMusicSequence.totalMeasures}
+            title="Next Section"
           >
             <FiSkipForward />
           </button>
         </div>
-      </div>
 
-      <div className="control-group">
-        <h3>Progress</h3>
-        <div className="progress-info">
+        <div className="progress-section">
           <div className="time-display">
             <span className="current-time">{formatTime(currentTime)}</span>
             <span className="separator">/</span>
-            <span className="total-time">
-              {formatTime(currentMusicSequence?.totalDuration || 0)}
-            </span>
+            <span className="total-time">{formatTime(totalDuration)}</span>
           </div>
-          <div className="bar-display">
-            <span>Bar {currentBar} of {totalBars}</span>
+          
+          <div className="progress-container">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={playbackProgress}
+              onChange={handleSeek}
+              className="progress-slider"
+            />
+            <div className="progress-markers">
+              {Array.from({ length: Math.min(currentMusicSequence.totalMeasures, 16) }, (_, i) => (
+                <div
+                  key={i}
+                  className={`measure-marker ${i + 1 === currentMeasure ? 'active' : ''}`}
+                  style={{ left: `${((i + 1) / currentMusicSequence.totalMeasures) * 100}%` }}
+                  onClick={() => jumpToMeasure(i + 1)}
+                  title={`Measure ${i + 1}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="progress-bar">
-          <div 
-            className="progress-fill"
-            style={{ width: `${getProgressPercentage()}%` }}
-          />
+          
+          <div className="measure-display">
+            <span>Measure {currentMeasure} / {currentMusicSequence.totalMeasures}</span>
+          </div>
         </div>
       </div>
 
-      <div className="control-group">
-        <h3>Tempo</h3>
-        <div className="tempo-controls">
+      <div className="secondary-controls">
+        <div className="volume-control">
+          <FiVolume2 />
           <input
             type="range"
-            min="60"
-            max="200"
-            value={currentTempo}
-            onChange={(e) => handleTempoChange(Number(e.target.value))}
-            className="tempo-slider"
+            min="0"
+            max="100"
+            value={volume}
+            onChange={handleVolumeChange}
+            className="volume-slider"
           />
-          <div className="tempo-display">
-            <span>{currentTempo} BPM</span>
-          </div>
+          <span className="volume-display">{volume}%</span>
         </div>
+
+        <div className="practice-mode">
+          <label className="practice-toggle">
+            <input
+              type="checkbox"
+              checked={practiceMode}
+              onChange={(e) => setPracticeMode(e.target.checked)}
+            />
+            <span>Practice Mode</span>
+          </label>
+        </div>
+
+        <button
+          className="control-button settings-button"
+          onClick={() => setShowSettings(!showSettings)}
+          title="Settings"
+        >
+          <FiSettings />
+        </button>
       </div>
 
-      <div className="control-group">
-        <h3>Loop</h3>
-        <div className="loop-controls">
-          <button
-            className={`control-button ${isLooping ? 'active' : ''}`}
-            onClick={toggleLoop}
-            title="Toggle Loop"
-            disabled={!currentMusicSequence}
-          >
-            <FiRepeat />
-          </button>
+      {showSettings && (
+        <div className="settings-panel">
+          <div className="setting-group">
+            <label>Tempo: {tempo} BPM</label>
+            <input
+              type="range"
+              min="60"
+              max="200"
+              value={tempo}
+              onChange={handleTempoChange}
+              className="tempo-slider"
+            />
+          </div>
           
-          <div className="loop-settings">
-            <button
-              className={`loop-button ${loopStart === currentBar ? 'active' : ''}`}
-              onClick={handleSetLoopStart}
-              title="Set Loop Start"
-              disabled={!currentMusicSequence}
-            >
-              Start: {loopStart || '--'}
-            </button>
-            
-            <button
-              className={`loop-button ${loopEnd === currentBar ? 'active' : ''}`}
-              onClick={handleSetLoopEnd}
-              title="Set Loop End"
-              disabled={!currentMusicSequence}
-            >
-              End: {loopEnd || '--'}
-            </button>
+          <div className="setting-group">
+            <label>Section: Measures {currentSection.start}-{currentSection.end}</label>
+            <div className="section-controls">
+              <button
+                className="section-button"
+                onClick={() => setCurrentSection({ 
+                  start: Math.max(1, currentSection.start - 1), 
+                  end: Math.max(4, currentSection.end - 1) 
+                })}
+                disabled={currentSection.start <= 1}
+              >
+                ←
+              </button>
+              <button
+                className="section-button"
+                onClick={() => setCurrentSection({ 
+                  start: Math.min(currentMusicSequence.totalMeasures - 3, currentSection.start + 1), 
+                  end: Math.min(currentMusicSequence.totalMeasures, currentSection.end + 1) 
+                })}
+                disabled={currentSection.end >= currentMusicSequence.totalMeasures}
+              >
+                →
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

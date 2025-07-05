@@ -1,290 +1,308 @@
-import * as Tone from 'tone'
-import { MusicSequence, MusicNotationParser } from './musicNotationParser'
+import { MusicNote, MusicSequence } from './musicNotationParser'
+
+export interface AudioEngineConfig {
+  volume: number
+  tempo: number
+  instrument: string
+}
 
 export class AudioEngine {
-  private synth: Tone.PolySynth
-  private sequencePart: Tone.Part | null = null
-  private isInitialized = false
-  private activeNotes: Map<number, string> = new Map()
+  private audioContext: AudioContext | null = null
+  private gainNode: GainNode | null = null
+  private scheduledNotes: Map<number, OscillatorNode> = new Map()
   private currentSequence: MusicSequence | null = null
-  private onPlaybackTimeUpdate?: (time: number) => void
+  private isPlaying = false
+  private startTime = 0
+  private pausedTime = 0
+  private config: AudioEngineConfig = {
+    volume: 0.5,
+    tempo: 120,
+    instrument: 'piano'
+  }
 
   constructor() {
-    this.synth = new Tone.PolySynth(Tone.Synth, {
-      oscillator: {
-        partials: [0, 2, 3, 4],
-      },
-      envelope: {
-        attack: 0.01,
-        decay: 0.1,
-        sustain: 0.3,
-        release: 0.3,
-      },
-    })
-    
-    this.synth.toDestination()
+    this.initializeAudioContext()
   }
 
-  async initialize() {
-    if (this.isInitialized) return
-    
+  private async initializeAudioContext() {
     try {
-      await Tone.start()
-      this.isInitialized = true
-      console.log('Audio engine initialized')
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      this.gainNode = this.audioContext.createGain()
+      this.gainNode.connect(this.audioContext.destination)
+      this.gainNode.gain.value = this.config.volume
+      
+      // Resume audio context if suspended (required by some browsers)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume()
+      }
     } catch (error) {
-      console.error('Failed to initialize audio engine:', error)
+      console.error('Failed to initialize audio context:', error)
     }
   }
 
-  async playNote(frequency: number) {
-    if (!this.isInitialized) {
-      await this.initialize()
+  async loadSequence(sequence: MusicSequence): Promise<void> {
+    this.currentSequence = sequence
+    this.config.tempo = sequence.metadata.tempo
+    console.log('Loaded music sequence:', sequence.metadata.title)
+    console.log('Total measures:', sequence.totalMeasures)
+    console.log('Total duration:', sequence.totalDuration, 'beats')
+  }
+
+  async play(onProgress?: (currentTime: number) => void): Promise<void> {
+    if (!this.audioContext || !this.currentSequence) {
+      console.error('Audio context or sequence not ready')
+      return
     }
 
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume()
+    }
+
+    this.isPlaying = true
+    this.startTime = this.audioContext.currentTime - this.pausedTime
+    
+    console.log('Starting playback at time:', this.startTime)
+    
+    // Schedule all notes
+    this.scheduleSequence(onProgress)
+  }
+
+  pause(): void {
+    this.isPlaying = false
+    this.pausedTime = this.audioContext ? this.audioContext.currentTime - this.startTime : 0
+    this.stopAllNotes()
+    console.log('Paused at time:', this.pausedTime)
+  }
+
+  stop(): void {
+    this.isPlaying = false
+    this.pausedTime = 0
+    this.stopAllNotes()
+    console.log('Stopped playback')
+  }
+
+  setVolume(volume: number): void {
+    this.config.volume = Math.max(0, Math.min(1, volume))
+    if (this.gainNode) {
+      this.gainNode.gain.value = this.config.volume
+    }
+  }
+
+  setTempo(tempo: number): void {
+    this.config.tempo = Math.max(40, Math.min(200, tempo))
+    if (this.currentSequence) {
+      this.currentSequence.metadata.tempo = this.config.tempo
+    }
+  }
+
+  getCurrentTime(): number {
+    if (!this.audioContext || !this.isPlaying) {
+      return this.pausedTime
+    }
+    return this.audioContext.currentTime - this.startTime
+  }
+
+  getDuration(): number {
+    if (!this.currentSequence) return 0
+    // Convert beats to seconds based on tempo
+    const beatsPerSecond = this.config.tempo / 60
+    return this.currentSequence.totalDuration / beatsPerSecond
+  }
+
+  private scheduleSequence(onProgress?: (currentTime: number) => void): void {
+    if (!this.currentSequence || !this.audioContext) return
+
+    const beatsPerSecond = this.config.tempo / 60
+    let scheduledNotesCount = 0
+
+    // Schedule all notes from all measures
+    for (const measure of this.currentSequence.measures) {
+      for (const note of measure.notes) {
+        const noteStartTime = this.startTime + (note.startTime / beatsPerSecond)
+        const noteDuration = note.duration / beatsPerSecond
+        
+        // Only schedule notes that haven't passed yet
+        if (noteStartTime > this.audioContext.currentTime) {
+          this.scheduleNote(note, noteStartTime, noteDuration)
+          scheduledNotesCount++
+        }
+      }
+    }
+
+    console.log(`Scheduled ${scheduledNotesCount} notes for playback`)
+
+    // Start progress tracking
+    if (onProgress) {
+      this.startProgressTracking(onProgress)
+    }
+  }
+
+  private scheduleNote(note: MusicNote, startTime: number, duration: number): void {
+    if (!this.audioContext || !this.gainNode) return
+
     try {
-      const freqStr = frequency.toString()
-      this.synth.triggerAttack(freqStr, Tone.now())
-      this.activeNotes.set(frequency, freqStr)
+      // Create oscillator for the note
+      const oscillator = this.audioContext.createOscillator()
+      const noteGain = this.audioContext.createGain()
+      
+      // Connect audio nodes
+      oscillator.connect(noteGain)
+      noteGain.connect(this.gainNode)
+      
+      // Set frequency
+      oscillator.frequency.value = note.frequency
+      
+      // Use a more pleasant waveform
+      oscillator.type = 'sine'
+      
+      // Set up ADSR envelope for more realistic sound
+      const attackTime = 0.01
+      const decayTime = 0.1
+      const sustainLevel = 0.7
+      const releaseTime = 0.2
+      
+      const noteVolume = (note.velocity / 127) * this.config.volume
+      
+      // Attack
+      noteGain.gain.setValueAtTime(0, startTime)
+      noteGain.gain.linearRampToValueAtTime(noteVolume, startTime + attackTime)
+      
+      // Decay
+      noteGain.gain.linearRampToValueAtTime(noteVolume * sustainLevel, startTime + attackTime + decayTime)
+      
+      // Sustain (hold the level)
+      noteGain.gain.setValueAtTime(noteVolume * sustainLevel, startTime + duration - releaseTime)
+      
+      // Release
+      noteGain.gain.linearRampToValueAtTime(0, startTime + duration)
+      
+      // Start and stop the oscillator
+      oscillator.start(startTime)
+      oscillator.stop(startTime + duration)
+      
+      // Store reference for potential cleanup
+      const noteId = Date.now() + Math.random()
+      this.scheduledNotes.set(noteId, oscillator)
+      
+      // Clean up after the note ends
+      oscillator.onended = () => {
+        this.scheduledNotes.delete(noteId)
+      }
+      
+    } catch (error) {
+      console.error('Failed to schedule note:', note.pitch, error)
+    }
+  }
+
+  private startProgressTracking(onProgress: (currentTime: number) => void): void {
+    if (!this.isPlaying) return
+
+    const updateProgress = () => {
+      if (!this.isPlaying) return
+
+      const currentTime = this.getCurrentTime()
+      const duration = this.getDuration()
+      
+      onProgress(currentTime)
+      
+      // Continue tracking if still playing and not finished
+      if (currentTime < duration) {
+        requestAnimationFrame(updateProgress)
+      } else {
+        // Playback finished
+        this.isPlaying = false
+        this.pausedTime = 0
+      }
+    }
+
+    requestAnimationFrame(updateProgress)
+  }
+
+  private stopAllNotes(): void {
+    for (const [_noteId, oscillator] of this.scheduledNotes) {
+      try {
+        oscillator.stop()
+      } catch (error) {
+        // Oscillator might already be stopped
+      }
+    }
+    this.scheduledNotes.clear()
+  }
+
+  // Get notes that should be playing at a specific time
+  getActiveNotes(time: number): MusicNote[] {
+    if (!this.currentSequence) return []
+
+    const beatsPerSecond = this.config.tempo / 60
+    const beatTime = time * beatsPerSecond
+
+    const activeNotes: MusicNote[] = []
+    
+    for (const measure of this.currentSequence.measures) {
+      for (const note of measure.notes) {
+        if (note.startTime <= beatTime && note.endTime > beatTime) {
+          activeNotes.push(note)
+        }
+      }
+    }
+
+    return activeNotes
+  }
+
+  // Get the current measure being played
+  getCurrentMeasure(time: number): number {
+    if (!this.currentSequence) return 1
+
+    const beatsPerSecond = this.config.tempo / 60
+    const beatTime = time * beatsPerSecond
+
+    for (const measure of this.currentSequence.measures) {
+      const measureStart = (measure.number - 1) * 4 // Assuming 4/4 time
+      const measureEnd = measureStart + 4
+      
+      if (beatTime >= measureStart && beatTime < measureEnd) {
+        return measure.number
+      }
+    }
+
+    return 1
+  }
+
+  // Play a single note (for testing/preview)
+  async playNote(frequency: number, duration: number = 0.5, velocity: number = 64): Promise<void> {
+    if (!this.audioContext || !this.gainNode) return
+
+    try {
+      const oscillator = this.audioContext.createOscillator()
+      const noteGain = this.audioContext.createGain()
+      
+      oscillator.connect(noteGain)
+      noteGain.connect(this.gainNode)
+      
+      oscillator.frequency.value = frequency
+      oscillator.type = 'sine'
+      
+      const volume = (velocity / 127) * this.config.volume
+      
+      // Simple envelope
+      const now = this.audioContext.currentTime
+      noteGain.gain.setValueAtTime(0, now)
+      noteGain.gain.linearRampToValueAtTime(volume, now + 0.01)
+      noteGain.gain.linearRampToValueAtTime(0, now + duration)
+      
+      oscillator.start(now)
+      oscillator.stop(now + duration)
+      
     } catch (error) {
       console.error('Failed to play note:', error)
     }
   }
 
-  async stopNote(frequency: number) {
-    if (!this.isInitialized) return
-
-    try {
-      const freqStr = this.activeNotes.get(frequency)
-      if (freqStr) {
-        this.synth.triggerRelease(freqStr, Tone.now())
-        this.activeNotes.delete(frequency)
-      }
-    } catch (error) {
-      console.error('Failed to stop note:', error)
-    }
-  }
-
-  async playSequence(notes: Array<{ frequency: number; duration: number; startTime: number }>) {
-    if (!this.isInitialized) {
-      await this.initialize()
-    }
-
-    try {
-      const now = Tone.now()
-      
-      notes.forEach(note => {
-        const freqStr = note.frequency.toString()
-        this.synth.triggerAttackRelease(
-          freqStr,
-          note.duration,
-          now + note.startTime
-        )
-      })
-    } catch (error) {
-      console.error('Failed to play sequence:', error)
-    }
-  }
-
-  async loadMusicSequence(sequence: MusicSequence) {
-    if (!this.isInitialized) {
-      await this.initialize()
-    }
-
-    try {
-      this.currentSequence = sequence
-      
-      // Clear existing sequence
-      if (this.sequencePart) {
-        this.sequencePart.dispose()
-        this.sequencePart = null
-      }
-
-      // Convert sequence to Tone.js format
-      const toneNotes = MusicNotationParser.sequenceToToneJSFormat(sequence)
-      
-      // Create new sequence part
-      this.sequencePart = new Tone.Part((time, note) => {
-        this.synth.triggerAttackRelease(note.note, note.duration, time, note.velocity)
-      }, toneNotes)
-
-      // Set up playback progress tracking
-      this.sequencePart.loop = false
-      this.sequencePart.loopStart = 0
-      this.sequencePart.loopEnd = `${sequence.bars.length}:0:0`
-
-      console.log('Music sequence loaded successfully')
-    } catch (error) {
-      console.error('Failed to load music sequence:', error)
-    }
-  }
-
-  setTempo(bpm: number) {
-    try {
-      Tone.Transport.bpm.value = bpm
-    } catch (error) {
-      console.error('Failed to set tempo:', error)
-    }
-  }
-
-  setLoop(start: number | null, end: number | null) {
-    try {
-      if (this.sequencePart && start !== null && end !== null) {
-        this.sequencePart.loop = true
-        this.sequencePart.loopStart = `${start - 1}:0:0` // Convert to 0-based
-        this.sequencePart.loopEnd = `${end}:0:0`
-      } else if (this.sequencePart) {
-        this.sequencePart.loop = false
-      }
-    } catch (error) {
-      console.error('Failed to set loop:', error)
-    }
-  }
-
-  async startPlayback() {
-    if (!this.isInitialized) {
-      await this.initialize()
-    }
-
-    try {
-      if (this.sequencePart) {
-        this.sequencePart.start()
-      }
-      
-      Tone.Transport.start()
-      
-      // Set up progress tracking
-      this.startProgressTracking()
-      
-      console.log('Playback started')
-    } catch (error) {
-      console.error('Failed to start playback:', error)
-    }
-  }
-
-  stopPlayback() {
-    try {
-      if (this.sequencePart) {
-        this.sequencePart.stop()
-      }
-      
-      Tone.Transport.stop()
-      Tone.Transport.position = 0
-      
-      // Stop progress tracking
-      this.stopProgressTracking()
-      
-      // Stop all active notes
-      this.activeNotes.forEach((freqStr) => {
-        this.synth.triggerRelease(freqStr, Tone.now())
-      })
-      this.activeNotes.clear()
-      
-      console.log('Playback stopped')
-    } catch (error) {
-      console.error('Failed to stop playback:', error)
-    }
-  }
-
-  pausePlayback() {
-    try {
-      if (this.sequencePart) {
-        this.sequencePart.stop()
-      }
-      
-      Tone.Transport.pause()
-      
-      // Stop progress tracking
-      this.stopProgressTracking()
-      
-      console.log('Playback paused')
-    } catch (error) {
-      console.error('Failed to pause playback:', error)
-    }
-  }
-
-  resumePlayback() {
-    try {
-      if (this.sequencePart) {
-        this.sequencePart.start()
-      }
-      
-      Tone.Transport.start()
-      
-      // Resume progress tracking
-      this.startProgressTracking()
-      
-      console.log('Playback resumed')
-    } catch (error) {
-      console.error('Failed to resume playback:', error)
-    }
-  }
-
-  seekToTime(time: number) {
-    try {
-      const transportTime = `${Math.floor(time / 4)}:${time % 4}:0`
-      Tone.Transport.position = transportTime
-      console.log(`Seeked to time: ${transportTime}`)
-    } catch (error) {
-      console.error('Failed to seek:', error)
-    }
-  }
-
-  setPlaybackTimeUpdateCallback(callback: (time: number) => void) {
-    this.onPlaybackTimeUpdate = callback
-  }
-
-  private startProgressTracking() {
-    // Update progress every 100ms
-    const updateInterval = setInterval(() => {
-      if (Tone.Transport.state === 'started') {
-        const position = Tone.Transport.position.toString()
-        const timeInBeats = this.transportPositionToBeats(position)
-        
-        if (this.onPlaybackTimeUpdate) {
-          this.onPlaybackTimeUpdate(timeInBeats)
-        }
-      } else {
-        clearInterval(updateInterval)
-      }
-    }, 100)
-  }
-
-  private stopProgressTracking() {
-    // Progress tracking will be automatically stopped when transport stops
-  }
-
-  private transportPositionToBeats(position: string | number): number {
-    if (typeof position === 'string') {
-      const parts = position.split(':')
-      const bars = parseInt(parts[0]) || 0
-      const beats = parseInt(parts[1]) || 0
-      const sixteenths = parseInt(parts[2]) || 0
-      
-      return bars * 4 + beats + sixteenths / 4
-    }
-    return 0
-  }
-
-  getCurrentSequence(): MusicSequence | null {
-    return this.currentSequence
-  }
-
-  dispose() {
-    try {
-      this.stopPlayback()
-      
-      if (this.sequencePart) {
-        this.sequencePart.dispose()
-        this.sequencePart = null
-      }
-      
-      this.synth.dispose()
-      this.currentSequence = null
-      
-      console.log('Audio engine disposed')
-    } catch (error) {
-      console.error('Failed to dispose audio engine:', error)
+  // Clean up resources
+  dispose(): void {
+    this.stop()
+    if (this.audioContext) {
+      this.audioContext.close()
     }
   }
 }

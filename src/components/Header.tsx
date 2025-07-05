@@ -7,12 +7,16 @@ export const Header: React.FC = () => {
   const { 
     currentSheetMusic, 
     sheetMusicCollection,
-    setCurrentSheetMusic,
-    reset 
+    setCurrentSheetMusic
   } = useAppStore()
 
   const showCollection = () => {
     setCurrentSheetMusic(null)
+  }
+
+  const startNewSession = () => {
+    setCurrentSheetMusic(null)
+    // Could add more reset logic here if needed
   }
 
   return (
@@ -20,7 +24,7 @@ export const Header: React.FC = () => {
       <div className="header-content">
         <div className="logo">
           <FiMusic className="logo-icon" />
-          <h1 className="logo-text">Note Pilot</h1>
+          <h1 className="logo-text">Music Tutor</h1>
         </div>
         
         <nav className="nav">
@@ -47,7 +51,7 @@ export const Header: React.FC = () => {
           
           <button
             className="nav-button"
-            onClick={reset}
+            onClick={startNewSession}
             title="New Session"
           >
             New Session

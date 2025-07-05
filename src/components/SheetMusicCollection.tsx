@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { FiMusic, FiTrash2, FiPlay, FiCalendar, FiUser } from 'react-icons/fi'
-import { useAppStore, SheetMusicFile } from '../store/useAppStore'
+import { FiCalendar, FiMusic, FiPlay, FiTrash2, FiUser } from 'react-icons/fi'
+import { SheetMusicItem, useAppStore } from '../store/useAppStore'
 import { FileManager } from '../utils/fileManager'
 import './SheetMusicCollection.scss'
 
@@ -9,13 +9,12 @@ export const SheetMusicCollection: React.FC = () => {
     sheetMusicCollection, 
     currentSheetMusic, 
     setCurrentSheetMusic, 
-    removeSheetMusic,
     setError 
   } = useAppStore()
   
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSelectSheetMusic = async (sheetMusic: SheetMusicFile) => {
+  const handleSelectSheetMusic = async (sheetMusic: SheetMusicItem) => {
     setIsLoading(true)
     try {
       setCurrentSheetMusic(sheetMusic)
@@ -30,10 +29,10 @@ export const SheetMusicCollection: React.FC = () => {
   const handleRemoveSheetMusic = async (id: string) => {
     if (window.confirm('Are you sure you want to remove this sheet music from your collection?')) {
       try {
-        removeSheetMusic(id)
+        // Remove from collection
+        const updatedCollection = sheetMusicCollection.filter(item => item.id !== id)
         
         // Update local storage
-        const updatedCollection = await FileManager.removeSheetMusicFile(id, sheetMusicCollection)
         await FileManager.updateSheetMusicCollection(updatedCollection)
         
         // If the removed item was currently selected, clear the selection
@@ -115,29 +114,29 @@ export const SheetMusicCollection: React.FC = () => {
               <div className="card-metadata">
                 <div className="metadata-item">
                   <FiUser className="metadata-icon" />
-                  <span>{sheetMusic.metadata.composer}</span>
+                  <span>{sheetMusic.metadata.artist || 'Unknown Artist'}</span>
                 </div>
                 
                 <div className="metadata-item">
                   <FiCalendar className="metadata-icon" />
-                  <span>{formatDate(sheetMusic.dateAdded)}</span>
+                  <span>{formatDate(new Date(sheetMusic.createdAt))}</span>
                 </div>
               </div>
               
               <div className="card-details">
                 <div className="detail-item">
                   <span className="detail-label">Key:</span>
-                  <span className="detail-value">{sheetMusic.metadata.key}</span>
+                  <span className="detail-value">{sheetMusic.metadata.key || 'Unknown'}</span>
                 </div>
                 
                 <div className="detail-item">
                   <span className="detail-label">Tempo:</span>
-                  <span className="detail-value">{sheetMusic.metadata.tempo} BPM</span>
+                  <span className="detail-value">{sheetMusic.metadata.tempo || 120} BPM</span>
                 </div>
                 
                 <div className="detail-item">
                   <span className="detail-label">Time:</span>
-                  <span className="detail-value">{sheetMusic.metadata.timeSignature}</span>
+                  <span className="detail-value">{sheetMusic.metadata.timeSignature || '4/4'}</span>
                 </div>
               </div>
               

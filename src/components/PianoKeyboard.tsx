@@ -1,7 +1,6 @@
-import React, { useEffect, useRef } from 'react'
-import { useAppStore } from '../store/useAppStore'
-import { AudioEngine } from '../utils/audioEngine'
+import React, { useEffect, useRef, useState } from 'react'
 import { Note } from '../store/useAppStore'
+import { AudioEngine } from '../utils/audioEngine'
 import './PianoKeyboard.scss'
 
 const PIANO_KEYS = [
@@ -41,13 +40,8 @@ const generateFullKeyboard = () => {
 }
 
 export const PianoKeyboard: React.FC = () => {
-  const { 
-    activeNotes, 
-    detectedNotes, 
-    showLetterNotation, 
-    addActiveNote, 
-    removeActiveNote 
-  } = useAppStore()
+  const [activeNotes, setActiveNotes] = useState<Note[]>([])
+  const [showLetterNotation, setShowLetterNotation] = useState(true)
   
   const audioEngineRef = useRef<AudioEngine | null>(null)
   const keys = generateFullKeyboard()
@@ -69,7 +63,14 @@ export const PianoKeyboard: React.FC = () => {
       midi: key.midi
     }
     
-    addActiveNote(note)
+    // Add to active notes if not already there
+    setActiveNotes(prev => {
+      if (!prev.some(n => n.midi === note.midi)) {
+        return [...prev, note]
+      }
+      return prev
+    })
+    
     audioEngineRef.current?.playNote(note.frequency)
   }
 
@@ -81,13 +82,17 @@ export const PianoKeyboard: React.FC = () => {
       midi: key.midi
     }
     
-    removeActiveNote(note)
-    audioEngineRef.current?.stopNote(note.frequency)
+    // Remove from active notes
+    setActiveNotes(prev => prev.filter(n => n.midi !== note.midi))
+    
+    // Stop the note (if the audio engine supports it)
+    if (audioEngineRef.current && 'stopNote' in audioEngineRef.current) {
+      (audioEngineRef.current as any).stopNote(note.frequency)
+    }
   }
 
   const isKeyActive = (midi: number) => {
-    return activeNotes.some(note => note.midi === midi) || 
-           detectedNotes.some(note => note.midi === midi)
+    return activeNotes.some(note => note.midi === midi)
   }
 
   return (
@@ -124,7 +129,7 @@ export const PianoKeyboard: React.FC = () => {
           <input
             type="checkbox"
             checked={showLetterNotation}
-            onChange={(e) => useAppStore.getState().setShowLetterNotation(e.target.checked)}
+            onChange={(e) => setShowLetterNotation(e.target.checked)}
           />
           Show Letter Notation
         </label>

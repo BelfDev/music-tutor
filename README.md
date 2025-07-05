@@ -76,6 +76,14 @@ Before you begin, ensure you have the following installed on your system:
    *This will install all required packages including React, TypeScript, Vite, and audio processing libraries*
 
 3. **Start Development Server**
+   
+   **Quick Option (using Make):**
+   ```bash
+   make quick
+   ```
+   *This automatically installs dependencies if needed and starts the server*
+   
+   **Manual Option (using npm):**
    ```bash
    npm run dev
    ```
@@ -86,6 +94,28 @@ Before you begin, ensure you have the following installed on your system:
 
 ### Available Scripts
 
+**Option 1: Using Make (Recommended)**
+```bash
+# Quick start - installs and starts development server
+make quick
+
+# Complete setup with checks
+make setup
+
+# Start development server
+make dev
+
+# Build for production
+make build
+
+# Run all quality checks
+make deploy-check
+
+# See all available commands
+make help
+```
+
+**Option 2: Using npm directly**
 ```bash
 # Development server with hot reload
 npm run dev
@@ -108,18 +138,33 @@ npm run lint:fix
 
 ### Development Workflow
 
-1. **Start the dev server**: `npm run dev`
+1. **Start the dev server**: `make dev` or `npm run dev`
 2. **Make changes** to the code - hot reload will update the browser automatically
 3. **Test features**:
    - Upload a PDF file (try the included `sheet-music/concerning_hobbits.pdf`)
    - Click piano keys to hear audio
    - Enable microphone for pitch detection
    - Explore learning aids and controls
+4. **Check code quality**: `make deploy-check` (runs build, lint, and type-check)
+5. **Get project status**: `make status` to see system info and project health
 
 ### Production Build
 
 To create an optimized production build:
 
+**Using Make (Recommended):**
+```bash
+# Build and verify everything is ready for deployment
+make deploy-check
+
+# Or just build
+make build
+
+# Preview the production build
+make preview
+```
+
+**Using npm directly:**
 ```bash
 # Build the application
 npm run build

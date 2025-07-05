@@ -1,9 +1,10 @@
 // Header component styles
 .header {
-  background: #2d2d2d;
-  border-bottom: 1px solid #444;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1rem 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
   
   @media (max-width: 768px) {
     padding: 1rem;
@@ -31,7 +32,7 @@
   .logo-text {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #ffffff;
+    color: #333333;
     margin: 0;
   }
 }
@@ -40,30 +41,54 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  
+  @media (max-width: 768px) {
+    gap: 0.5rem;
+  }
 }
 
 .nav-button {
-  background: #3a3a3a;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  color: #333333;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.9rem;
+  cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
+  font-weight: 500;
   
   &:hover {
-    background: #4a4a4a;
+    background: rgba(255, 255, 255, 0.3);
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
   
   &:active {
     transform: translateY(0);
   }
   
+  &.active {
+    background: #4a90e2;
+    color: white;
+    border-color: #4a90e2;
+    
+    &:hover {
+      background: #357abd;
+    }
+  }
+  
   svg {
     font-size: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
   }
   
   @media (max-width: 480px) {

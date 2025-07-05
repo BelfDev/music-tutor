@@ -1,25 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { FiMic, FiMicOff, FiVolume2, FiVolumeX } from 'react-icons/fi'
-import { useAppStore } from '../store/useAppStore'
-import { PitchDetector } from '../utils/pitchDetector'
+import React, { useEffect, useRef, useState } from 'react'
+import { FiActivity, FiMic, FiMicOff, FiVolume2 } from 'react-icons/fi'
 import { Note } from '../store/useAppStore'
+import { PitchDetector } from '../utils/pitchDetector'
 import './MicrophoneInput.scss'
 
 export const MicrophoneInput: React.FC = () => {
-  const {
-    microphoneEnabled,
-    microphonePermission,
-    detectedNotes,
-    setMicrophoneEnabled,
-    setMicrophonePermission,
-    setDetectedNotes,
-    addActiveNote,
-    removeActiveNote
-  } = useAppStore()
-
   const [audioLevel, setAudioLevel] = useState(0)
   const [isListening, setIsListening] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [detectedNotes, setDetectedNotes] = useState<Note[]>([])
+  const [microphonePermission, setMicrophonePermission] = useState(false)
   
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const pitchDetectorRef = useRef<PitchDetector | null>(null)
@@ -80,7 +70,6 @@ export const MicrophoneInput: React.FC = () => {
       pitchDetectorRef.current = new PitchDetector(audioContextRef.current.sampleRate)
       
       setIsListening(true)
-      setMicrophoneEnabled(true)
       
       // Start pitch detection loop
       startPitchDetection()
@@ -93,7 +82,6 @@ export const MicrophoneInput: React.FC = () => {
 
   const stopListening = () => {
     setIsListening(false)
-    setMicrophoneEnabled(false)
     
     // Stop all audio processing
     if (microphoneRef.current) {
@@ -144,7 +132,6 @@ export const MicrophoneInput: React.FC = () => {
         const note = frequencyToNote(pitch)
         if (note) {
           setDetectedNotes([note])
-          addActiveNote(note)
         }
       } else {
         setDetectedNotes([])
@@ -207,48 +194,48 @@ export const MicrophoneInput: React.FC = () => {
         </div>
       )}
 
-      <div className="microphone-content">
-        <div className="audio-level">
-          <label>Audio Level:</label>
-          <div className="level-bar">
+      <div className="microphone-status">
+        <div className="status-item">
+          <FiActivity className="icon" />
+          <span>Status: {isListening ? 'Listening' : 'Stopped'}</span>
+        </div>
+        
+        <div className="status-item">
+          <FiVolume2 className="icon" />
+          <span>Level:</span>
+          <div className="audio-level-bar">
             <div 
-              className="level-fill"
+              className="audio-level-fill"
               style={{ width: `${audioLevel * 100}%` }}
             />
           </div>
-          {audioLevel > 0 ? <FiVolume2 /> : <FiVolumeX />}
         </div>
+      </div>
 
-        <div className="detection-status">
+      {isListening && (
+        <div className="detected-notes">
           <h4>Detected Notes:</h4>
-          <div className="detected-notes">
+          <div className="notes-list">
             {detectedNotes.length > 0 ? (
               detectedNotes.map((note, index) => (
                 <div key={index} className="detected-note">
-                  <span className="note-name">{note.name}</span>
-                  <span className="note-octave">{note.octave}</span>
+                  <span className="note-name">{note.name}{note.octave}</span>
                   <span className="note-frequency">{note.frequency.toFixed(1)} Hz</span>
                 </div>
               ))
             ) : (
-              <span className="no-detection">
-                {isListening ? 'Listening...' : 'Not listening'}
-              </span>
+              <p className="no-notes">Play a note to see detection...</p>
             )}
           </div>
         </div>
+      )}
 
-        <div className="microphone-info">
-          <p>
-            <strong>Privacy:</strong> All audio processing happens locally in your browser. 
-            No audio data is sent to external servers.
-          </p>
-          <p>
-            <strong>Tip:</strong> For best results, play close to the microphone and 
-            minimize background noise.
-          </p>
+      {!microphonePermission && !isListening && (
+        <div className="permission-info">
+          <p>Click "Start" to enable microphone for pitch detection.</p>
+          <p>Make sure to allow microphone access when prompted.</p>
         </div>
-      </div>
+      )}
     </div>
   )
 }

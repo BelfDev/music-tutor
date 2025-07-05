@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { AudioEngine } from '../utils/audioEngine'
+import { MusicSequence } from '../utils/musicNotationParser'
 
 export interface Note {
   name: string
@@ -9,155 +11,259 @@ export interface Note {
 
 export interface SongMetadata {
   title: string
-  composer: string
-  tempo: number
-  timeSignature: string
+  artist: string
   key: string
+  timeSignature: string
+  tempo: number
+  difficulty: string
+  genre: string
+  duration: number
+}
+
+export interface SheetMusicItem {
+  id: string
+  name: string
+  file: File
+  metadata: SongMetadata
+  pages: string[]
+  createdAt: Date
+  lastPlayed?: Date
 }
 
 export interface AppState {
-  // PDF and sheet music
-  currentPDF: File | null
+  // Sheet music state
+  sheetMusicCollection: SheetMusicItem[]
+  currentSheetMusic: SheetMusicItem | null
   sheetMusicPages: string[]
   currentPage: number
+  currentPDF: File | null
+  currentMusicSequence: MusicSequence | null
   
-  // Playback
+  // Playback state
   isPlaying: boolean
-  currentTempo: number
+  isPaused: boolean
+  currentTime: number
+  totalDuration: number
   currentBar: number
-  currentBeat: number
-  loopStart: number | null
-  loopEnd: number | null
-  
-  // Piano and notes
+  currentMeasure: number
+  playbackProgress: number
   activeNotes: Note[]
-  detectedNotes: Note[]
-  showLetterNotation: boolean
   
-  // Song information
-  songMetadata: SongMetadata | null
-  
-  // Microphone
-  microphoneEnabled: boolean
-  microphonePermission: boolean
-  
-  // Learning aids
-  showTips: boolean
-  currentTips: string[]
+  // Audio engine
+  audioEngine: AudioEngine
   
   // UI state
   isLoading: boolean
   error: string | null
-}
-
-export interface AppActions {
-  // PDF actions
-  setPDF: (file: File) => void
+  
+  // Learning state
+  currentSection: { start: number; end: number }
+  practiceMode: boolean
+  showHints: boolean
+  
+  // Actions
+  setCurrentSheetMusic: (sheetMusic: SheetMusicItem | null) => void
   setSheetMusicPages: (pages: string[]) => void
   setCurrentPage: (page: number) => void
+  setCurrentPDF: (file: File | null) => void
+  setCurrentMusicSequence: (sequence: MusicSequence | null) => void
+  loadSheetMusicCollection: (collection: SheetMusicItem[]) => void
+  addSheetMusicItem: (item: SheetMusicItem) => void
+  removeSheetMusicItem: (id: string) => void
   
   // Playback actions
-  setIsPlaying: (playing: boolean) => void
-  setCurrentTempo: (tempo: number) => void
+  play: () => Promise<void>
+  pause: () => void
+  stop: () => void
+  seekTo: (time: number) => void
+  setCurrentTime: (time: number) => void
   setCurrentBar: (bar: number) => void
-  setCurrentBeat: (beat: number) => void
-  setLoopStart: (bar: number | null) => void
-  setLoopEnd: (bar: number | null) => void
-  
-  // Piano actions
+  setCurrentMeasure: (measure: number) => void
   setActiveNotes: (notes: Note[]) => void
-  addActiveNote: (note: Note) => void
-  removeActiveNote: (note: Note) => void
-  setDetectedNotes: (notes: Note[]) => void
-  setShowLetterNotation: (show: boolean) => void
-  
-  // Song metadata
-  setSongMetadata: (metadata: SongMetadata) => void
-  
-  // Microphone actions
-  setMicrophoneEnabled: (enabled: boolean) => void
-  setMicrophonePermission: (permission: boolean) => void
-  
-  // Learning aids
-  setShowTips: (show: boolean) => void
-  setCurrentTips: (tips: string[]) => void
   
   // UI actions
   setIsLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   
-  // Reset
-  reset: () => void
+  // Learning actions
+  setCurrentSection: (section: { start: number; end: number }) => void
+  setPracticeMode: (enabled: boolean) => void
+  setShowHints: (show: boolean) => void
 }
 
-const initialState: AppState = {
-  currentPDF: null,
+export const useAppStore = create<AppState>((set, get) => ({
+  // Initial state
+  sheetMusicCollection: [],
+  currentSheetMusic: null,
   sheetMusicPages: [],
   currentPage: 0,
+  currentPDF: null,
+  currentMusicSequence: null,
+  
   isPlaying: false,
-  currentTempo: 120,
-  currentBar: 1,
-  currentBeat: 1,
-  loopStart: null,
-  loopEnd: null,
+  isPaused: false,
+  currentTime: 0,
+  totalDuration: 0,
+  currentBar: 0,
+  currentMeasure: 1,
+  playbackProgress: 0,
   activeNotes: [],
-  detectedNotes: [],
-  showLetterNotation: true,
-  songMetadata: null,
-  microphoneEnabled: false,
-  microphonePermission: false,
-  showTips: true,
-  currentTips: [],
+  
+  audioEngine: new AudioEngine(),
+  
   isLoading: false,
-  error: null
-}
-
-export const useAppStore = create<AppState & AppActions>((set, get) => ({
-  ...initialState,
+  error: null,
   
-  // PDF actions
-  setPDF: (file: File) => set({ currentPDF: file }),
-  setSheetMusicPages: (pages: string[]) => set({ sheetMusicPages: pages }),
-  setCurrentPage: (page: number) => set({ currentPage: page }),
+  currentSection: { start: 1, end: 4 },
+  practiceMode: false,
+  showHints: true,
   
-  // Playback actions
-  setIsPlaying: (playing: boolean) => set({ isPlaying: playing }),
-  setCurrentTempo: (tempo: number) => set({ currentTempo: tempo }),
-  setCurrentBar: (bar: number) => set({ currentBar: bar }),
-  setCurrentBeat: (beat: number) => set({ currentBeat: beat }),
-  setLoopStart: (bar: number | null) => set({ loopStart: bar }),
-  setLoopEnd: (bar: number | null) => set({ loopEnd: bar }),
-  
-  // Piano actions
-  setActiveNotes: (notes: Note[]) => set({ activeNotes: notes }),
-  addActiveNote: (note: Note) => {
-    const { activeNotes } = get()
-    if (!activeNotes.find(n => n.midi === note.midi)) {
-      set({ activeNotes: [...activeNotes, note] })
+  // Actions
+  setCurrentSheetMusic: (sheetMusic) => {
+    set({ currentSheetMusic: sheetMusic })
+    if (sheetMusic) {
+      set({ 
+        sheetMusicPages: sheetMusic.pages,
+        currentPage: 0,
+        currentPDF: sheetMusic.file
+      })
+    } else {
+      set({ 
+        sheetMusicPages: [],
+        currentPage: 0,
+        currentPDF: null,
+        currentMusicSequence: null
+      })
     }
   },
-  removeActiveNote: (note: Note) => {
-    const { activeNotes } = get()
-    set({ activeNotes: activeNotes.filter(n => n.midi !== note.midi) })
+  
+  setSheetMusicPages: (pages) => set({ sheetMusicPages: pages }),
+  setCurrentPage: (page) => set({ currentPage: page }),
+  setCurrentPDF: (file) => set({ currentPDF: file }),
+  
+  setCurrentMusicSequence: (sequence) => {
+    set({ currentMusicSequence: sequence })
+    if (sequence) {
+      const state = get()
+      state.audioEngine.loadSequence(sequence)
+      set({ 
+        totalDuration: state.audioEngine.getDuration(),
+        currentSection: { start: 1, end: Math.min(4, sequence.totalMeasures) }
+      })
+    }
   },
-  setDetectedNotes: (notes: Note[]) => set({ detectedNotes: notes }),
-  setShowLetterNotation: (show: boolean) => set({ showLetterNotation: show }),
   
-  // Song metadata
-  setSongMetadata: (metadata: SongMetadata) => set({ songMetadata: metadata }),
+  loadSheetMusicCollection: (collection) => set({ sheetMusicCollection: collection }),
   
-  // Microphone actions
-  setMicrophoneEnabled: (enabled: boolean) => set({ microphoneEnabled: enabled }),
-  setMicrophonePermission: (permission: boolean) => set({ microphonePermission: permission }),
+  addSheetMusicItem: (item) => {
+    const state = get()
+    const updatedCollection = [...state.sheetMusicCollection, item]
+    set({ sheetMusicCollection: updatedCollection })
+  },
   
-  // Learning aids
-  setShowTips: (show: boolean) => set({ showTips: show }),
-  setCurrentTips: (tips: string[]) => set({ currentTips: tips }),
+  removeSheetMusicItem: (id) => {
+    const state = get()
+    const updatedCollection = state.sheetMusicCollection.filter(item => item.id !== id)
+    set({ sheetMusicCollection: updatedCollection })
+  },
+  
+  // Playback actions
+  play: async () => {
+    const state = get()
+    if (!state.currentMusicSequence) {
+      console.error('No music sequence loaded')
+      return
+    }
+    
+    try {
+      set({ isPlaying: true, isPaused: false })
+      
+      await state.audioEngine.play((currentTime) => {
+        const progress = state.totalDuration > 0 ? (currentTime / state.totalDuration) * 100 : 0
+        const currentMeasure = state.audioEngine.getCurrentMeasure(currentTime)
+        
+        // Get active notes at current time
+        const activeNotes = state.audioEngine.getActiveNotes(currentTime)
+        const storeNotes: Note[] = activeNotes.map(musicNote => ({
+          name: musicNote.pitch.replace(/[0-9]/g, ''), // Remove octave number
+          frequency: musicNote.frequency,
+          octave: parseInt(musicNote.pitch.match(/[0-9]/)?.[0] || '4'),
+          midi: musicNote.midi
+        }))
+        
+        set({ 
+          currentTime,
+          playbackProgress: progress,
+          currentMeasure,
+          currentBar: currentMeasure,
+          activeNotes: storeNotes
+        })
+      })
+    } catch (error) {
+      console.error('Failed to start playback:', error)
+      set({ isPlaying: false, error: 'Failed to start playback' })
+    }
+  },
+  
+  pause: () => {
+    const state = get()
+    state.audioEngine.pause()
+    set({ isPlaying: false, isPaused: true, activeNotes: [] })
+  },
+  
+  stop: () => {
+    const state = get()
+    state.audioEngine.stop()
+    set({ 
+      isPlaying: false, 
+      isPaused: false, 
+      currentTime: 0, 
+      playbackProgress: 0,
+      currentBar: 0,
+      currentMeasure: 1,
+      activeNotes: []
+    })
+  },
+  
+  seekTo: (time) => {
+    const state = get()
+    const clampedTime = Math.max(0, Math.min(time, state.totalDuration))
+    const progress = state.totalDuration > 0 ? (clampedTime / state.totalDuration) * 100 : 0
+    const currentMeasure = state.audioEngine.getCurrentMeasure(clampedTime)
+    
+    set({ 
+      currentTime: clampedTime,
+      playbackProgress: progress,
+      currentMeasure,
+      currentBar: currentMeasure
+    })
+  },
+  
+  setCurrentTime: (time) => {
+    const state = get()
+    const progress = state.totalDuration > 0 ? (time / state.totalDuration) * 100 : 0
+    const currentMeasure = state.currentMusicSequence ? 
+      state.audioEngine.getCurrentMeasure(time) : 1
+    
+    set({ 
+      currentTime: time,
+      playbackProgress: progress,
+      currentMeasure,
+      currentBar: currentMeasure
+    })
+  },
+  
+  setCurrentBar: (bar) => set({ currentBar: bar }),
+  setCurrentMeasure: (measure) => set({ currentMeasure: measure }),
+  
+  setActiveNotes: (notes) => set({ activeNotes: notes }),
   
   // UI actions
-  setIsLoading: (loading: boolean) => set({ isLoading: loading }),
-  setError: (error: string | null) => set({ error }),
+  setIsLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
   
-  // Reset
-  reset: () => set(initialState)
+  // Learning actions
+  setCurrentSection: (section) => set({ currentSection: section }),
+  setPracticeMode: (enabled) => set({ practiceMode: enabled }),
+  setShowHints: (show) => set({ showHints: show })
 }))

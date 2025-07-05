@@ -1,52 +1,58 @@
 // PlaybackControls component styles
 .playback-controls {
-  background: #2d2d2d;
-  border-radius: 8px;
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  
-  @media (max-width: 1200px) {
-    flex-direction: row;
-    justify-content: space-between;
-  }
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  min-height: 120px;
 }
 
-.control-group {
-  h3 {
-    margin: 0 0 0.75rem 0;
-    font-size: 1rem;
-    color: #ccc;
-  }
+.controls-disabled {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  font-style: italic;
+}
+
+.main-controls {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
 }
 
 .transport-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  justify-content: center;
 }
 
 .control-button {
-  background: #3a3a3a;
-  color: #fff;
+  background: #f0f0f0;
   border: none;
+  border-radius: 8px;
   padding: 0.75rem;
-  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.1rem;
+  color: #333;
   
   &:hover:not(:disabled) {
-    background: #4a4a4a;
+    background: #e0e0e0;
     transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
   }
   
   &:disabled {
@@ -54,53 +60,198 @@
     cursor: not-allowed;
   }
   
-  &.primary {
+  &.play-button {
     background: #4a90e2;
+    color: white;
+    font-size: 1.3rem;
+    padding: 1rem;
     
     &:hover:not(:disabled) {
       background: #357abd;
     }
   }
   
-  &.active {
-    background: #7ed321;
+  &.skip-button {
+    background: #6c757d;
+    color: white;
     
     &:hover:not(:disabled) {
-      background: #5a9f16;
+      background: #5a6268;
     }
   }
   
-  svg {
-    font-size: 1.2rem;
+  &.settings-button {
+    background: #28a745;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background: #218838;
+    }
   }
 }
 
-.tempo-controls {
+.progress-section {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  align-items: center;
+  min-width: 300px;
 }
 
-.tempo-slider {
+.time-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+  
+  .current-time {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .separator {
+    color: #ccc;
+  }
+}
+
+.progress-container {
+  position: relative;
+  height: 8px;
+  margin: 0.5rem 0;
+}
+
+.progress-slider {
   width: 100%;
-  height: 6px;
-  background: #555;
-  border-radius: 3px;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
   outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
   
   &::-webkit-slider-thumb {
+    -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
+    background: #4a90e2;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+  
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #4a90e2;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.progress-markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  pointer-events: none;
+}
+
+.measure-marker {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 8px;
+  background: #ccc;
+  border-radius: 1px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #666;
+    transform: scaleY(1.5);
+  }
+  
+  &.active {
+    background: #ffc107;
+    transform: scaleY(1.5);
+    box-shadow: 0 0 4px rgba(255, 193, 7, 0.5);
+  }
+}
+
+.measure-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 150px;
+  text-align: center;
+  
+  span {
+    font-size: 0.9rem;
+    color: #333;
+    font-weight: 500;
+  }
+  
+  .beat-display {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 400;
+  }
+}
+
+.secondary-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  svg {
+    color: #666;
+    font-size: 1.1rem;
+  }
+}
+
+.volume-slider {
+  width: 80px;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
     background: #4a90e2;
     border-radius: 50%;
     cursor: pointer;
   }
   
   &::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 12px;
+    height: 12px;
     background: #4a90e2;
     border-radius: 50%;
     cursor: pointer;
@@ -108,41 +259,172 @@
   }
 }
 
-.tempo-display {
-  font-size: 0.9rem;
-  color: #ccc;
-  font-weight: 500;
+.volume-display {
+  font-size: 0.8rem;
+  color: #666;
+  min-width: 35px;
 }
 
-.loop-controls {
+.practice-mode {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
   align-items: center;
 }
 
-.loop-settings {
+.practice-toggle {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
-}
-
-.loop-button {
-  background: #3a3a3a;
-  color: #ccc;
-  border: none;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
   cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  color: #666;
   
-  &:hover:not(:disabled) {
-    background: #4a4a4a;
-    color: #fff;
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #4a90e2;
   }
   
-  &.active {
-    background: #f5a623;
-    color: #000;
+  &:hover {
+    color: #333;
+  }
+}
+
+.settings-panel {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  margin-top: 0.5rem;
+  
+  .setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+}
+
+.tempo-slider {
+  width: 100%;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #28a745;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #28a745;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+  }
+}
+
+.section-controls {
+  display: flex;
+  gap: 0.5rem;
+  
+  .section-button {
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    
+    &:hover:not(:disabled) {
+      background: #5a6268;
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .main-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .transport-controls {
+    justify-content: center;
+  }
+  
+  .progress-section {
+    min-width: auto;
+  }
+  
+  .secondary-controls {
+    justify-content: center;
+    gap: 1rem;
+  }
+  
+  .volume-control {
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+  }
+  
+  .volume-slider {
+    width: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .playback-controls {
+    padding: 0.75rem;
+  }
+  
+  .transport-controls {
+    gap: 0.25rem;
+  }
+  
+  .control-button {
+    padding: 0.5rem;
+    font-size: 1rem;
+    
+    &.play-button {
+      padding: 0.75rem;
+      font-size: 1.1rem;
+    }
+  }
+  
+  .secondary-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .settings-panel {
+    padding: 0.75rem;
   }
 }

@@ -1,7 +1,6 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { AudioEngine } from '../utils/audioEngine'
-import { Note } from '../store/useAppStore'
 import './PianoKeyboard.scss'
 
 const PIANO_KEYS = [
@@ -41,13 +40,9 @@ const generateFullKeyboard = () => {
 }
 
 export const PianoKeyboard: React.FC = () => {
-  const { 
-    activeNotes, 
-    detectedNotes, 
-    showLetterNotation, 
-    addActiveNote, 
-    removeActiveNote 
-  } = useAppStore()
+  const { activeNotes, isPlaying } = useAppStore()
+  const [manualActiveNotes, setManualActiveNotes] = useState<{ midi: number; frequency: number }[]>([])
+  const [showLetterNotation, setShowLetterNotation] = useState(true)
   
   const audioEngineRef = useRef<AudioEngine | null>(null)
   const keys = generateFullKeyboard()
@@ -62,45 +57,60 @@ export const PianoKeyboard: React.FC = () => {
   }, [])
 
   const handleKeyPress = (key: typeof keys[0]) => {
-    const note: Note = {
-      name: key.note,
-      frequency: 440 * Math.pow(2, (key.midi - 69) / 12), // A4 = 440Hz
-      octave: key.octave,
-      midi: key.midi
-    }
+    const frequency = 440 * Math.pow(2, (key.midi - 69) / 12) // A4 = 440Hz
     
-    addActiveNote(note)
-    audioEngineRef.current?.playNote(note.frequency)
+    // Add to manual active notes if not already there
+    setManualActiveNotes(prev => {
+      if (!prev.some(n => n.midi === key.midi)) {
+        return [...prev, { midi: key.midi, frequency }]
+      }
+      return prev
+    })
+    
+    audioEngineRef.current?.playNote(frequency)
   }
 
   const handleKeyRelease = (key: typeof keys[0]) => {
-    const note: Note = {
-      name: key.note,
-      frequency: 440 * Math.pow(2, (key.midi - 69) / 12),
-      octave: key.octave,
-      midi: key.midi
-    }
+    // Remove from manual active notes
+    setManualActiveNotes(prev => prev.filter(n => n.midi !== key.midi))
     
-    removeActiveNote(note)
-    audioEngineRef.current?.stopNote(note.frequency)
+    // Stop the note (if the audio engine supports it)
+    const frequency = 440 * Math.pow(2, (key.midi - 69) / 12)
+    if (audioEngineRef.current && 'stopNote' in audioEngineRef.current) {
+      (audioEngineRef.current as any).stopNote(frequency)
+    }
   }
 
   const isKeyActive = (midi: number) => {
-    return activeNotes.some(note => note.midi === midi) || 
-           detectedNotes.some(note => note.midi === midi)
+    // Check if key is active from playback
+    const playbackActive = isPlaying && activeNotes.some(note => note.midi === midi)
+    // Check if key is manually pressed
+    const manualActive = manualActiveNotes.some(note => note.midi === midi)
+    
+    return playbackActive || manualActive
+  }
+
+  const getKeyHighlightClass = (midi: number) => {
+    const playbackActive = isPlaying && activeNotes.some(note => note.midi === midi)
+    const manualActive = manualActiveNotes.some(note => note.midi === midi)
+    
+    if (playbackActive && manualActive) return 'active playback manual'
+    if (playbackActive) return 'active playback'
+    if (manualActive) return 'active manual'
+    return ''
   }
 
   return (
     <div className="piano-keyboard">
       <div className="keyboard-container">
         <div className="keyboard">
-          {keys.map((key, index) => (
+          {keys.map((key) => (
             <div
               key={`${key.note}-${key.octave}-${key.midi}`}
               className={`
                 piano-key 
                 ${key.type} 
-                ${isKeyActive(key.midi) ? 'active' : ''}
+                ${getKeyHighlightClass(key.midi)}
               `}
               onMouseDown={() => handleKeyPress(key)}
               onMouseUp={() => handleKeyRelease(key)}
@@ -124,7 +134,7 @@ export const PianoKeyboard: React.FC = () => {
           <input
             type="checkbox"
             checked={showLetterNotation}
-            onChange={(e) => useAppStore.getState().setShowLetterNotation(e.target.checked)}
+            onChange={(e) => setShowLetterNotation(e.target.checked)}
           />
           Show Letter Notation
         </label>

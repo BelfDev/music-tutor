@@ -1,18 +1,19 @@
 import React from 'react'
-import { FiInfo, FiMusic, FiUser, FiClock } from 'react-icons/fi'
+import { FiClock, FiInfo, FiMusic, FiTrendingUp, FiUser } from 'react-icons/fi'
 import { useAppStore } from '../store/useAppStore'
 import './SongInfo.scss'
 
 export const SongInfo: React.FC = () => {
   const { 
-    songMetadata, 
-    currentBar, 
-    currentBeat, 
-    currentTempo,
-    isPlaying 
+    currentSheetMusic,
+    currentMeasure,
+    currentTime,
+    totalDuration,
+    isPlaying,
+    audioEngine
   } = useAppStore()
 
-  if (!songMetadata) {
+  if (!currentSheetMusic) {
     return (
       <div className="song-info">
         <div className="info-placeholder">
@@ -23,31 +24,46 @@ export const SongInfo: React.FC = () => {
     )
   }
 
+  const metadata = currentSheetMusic.metadata
+
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = Math.floor(seconds % 60)
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+
   return (
     <div className="song-info">
       <div className="song-header">
         <div className="song-title">
           <FiMusic className="icon" />
-          <h2>{songMetadata.title}</h2>
+          <h2>{metadata.title}</h2>
         </div>
-        <div className="song-composer">
+        <div className="song-artist">
           <FiUser className="icon" />
-          <span>{songMetadata.composer}</span>
+          <span>{metadata.artist}</span>
         </div>
       </div>
 
       <div className="song-details">
         <div className="detail-item">
           <label>Key:</label>
-          <span>{songMetadata.key}</span>
+          <span>{metadata.key}</span>
         </div>
         <div className="detail-item">
-          <label>Time Signature:</label>
-          <span>{songMetadata.timeSignature}</span>
+          <label>Time:</label>
+          <span>{metadata.timeSignature}</span>
         </div>
         <div className="detail-item">
           <label>Tempo:</label>
-          <span>{songMetadata.tempo} BPM</span>
+          <span>{metadata.tempo} BPM</span>
+        </div>
+        <div className="detail-item">
+          <label>Difficulty:</label>
+          <span className={`difficulty ${metadata.difficulty.toLowerCase()}`}>
+            <FiTrendingUp />
+            {metadata.difficulty}
+          </span>
         </div>
       </div>
 
@@ -55,16 +71,22 @@ export const SongInfo: React.FC = () => {
         <h3>Current Position</h3>
         <div className="position-display">
           <div className="position-item">
-            <label>Bar:</label>
-            <span className="position-value">{currentBar}</span>
+            <label>Measure:</label>
+            <span className="position-value">{currentMeasure}</span>
+          </div>
+          {isPlaying && (
+            <div className="position-item">
+              <label>Beat:</label>
+              <span className="position-value">{audioEngine.getCurrentBeat(currentTime)}</span>
+            </div>
+          )}
+          <div className="position-item">
+            <label>Time:</label>
+            <span className="position-value">{formatTime(currentTime)}</span>
           </div>
           <div className="position-item">
-            <label>Beat:</label>
-            <span className="position-value">{currentBeat}</span>
-          </div>
-          <div className="position-item">
-            <label>Tempo:</label>
-            <span className="position-value">{currentTempo} BPM</span>
+            <label>Duration:</label>
+            <span className="position-value">{formatTime(totalDuration)}</span>
           </div>
         </div>
         

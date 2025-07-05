@@ -50,26 +50,101 @@ A comprehensive web-based piano sheet music learning application that accelerate
 - **Styling**: Sass/SCSS
 - **State Management**: Zustand
 
-## Quick Start
+## How to Run the Project
 
-1. **Clone and Install**
+### Prerequisites
+
+Before you begin, ensure you have the following installed on your system:
+
+- **Node.js** (version 16.0 or higher) - [Download here](https://nodejs.org/)
+- **npm** (comes with Node.js) or **yarn** package manager
+- **Git** for cloning the repository
+- **Modern web browser** (Chrome, Firefox, Safari, or Edge)
+
+### Installation & Setup
+
+1. **Clone the Repository**
    ```bash
    git clone <repository-url>
    cd note-pilot
-   npm install
    ```
 
-2. **Development**
+2. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+   *This will install all required packages including React, TypeScript, Vite, and audio processing libraries*
+
+3. **Start Development Server**
    ```bash
    npm run dev
    ```
-   Open http://localhost:3000
+   
+4. **Open in Browser**
+   - Navigate to **http://localhost:3000**
+   - The application should load with the Note Pilot interface
 
-3. **Production Build**
-   ```bash
-   npm run build
-   npm run preview
-   ```
+### Available Scripts
+
+```bash
+# Development server with hot reload
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build locally
+npm run preview
+
+# Run type checking
+npm run type-check
+
+# Run linter
+npm run lint
+
+# Run linter with auto-fix
+npm run lint:fix
+```
+
+### Development Workflow
+
+1. **Start the dev server**: `npm run dev`
+2. **Make changes** to the code - hot reload will update the browser automatically
+3. **Test features**:
+   - Upload a PDF file (try the included `sheet-music/concerning_hobbits.pdf`)
+   - Click piano keys to hear audio
+   - Enable microphone for pitch detection
+   - Explore learning aids and controls
+
+### Production Build
+
+To create an optimized production build:
+
+```bash
+# Build the application
+npm run build
+
+# Serve the built files locally for testing
+npm run preview
+```
+
+The built files will be in the `dist/` directory, ready for deployment to any static hosting service.
+
+### Troubleshooting
+
+**If you encounter issues:**
+
+1. **Node.js version**: Ensure you're using Node.js 16+ (`node --version`)
+2. **Clear cache**: Delete `node_modules/` and run `npm install` again
+3. **Port conflicts**: If port 3000 is busy, Vite will automatically use the next available port
+4. **Audio issues**: Some browsers require user interaction before playing audio - click anywhere on the page first
+5. **Microphone permissions**: Grant microphone access when prompted for pitch detection features
+
+**Browser-specific notes:**
+- **Chrome/Edge**: Full functionality (recommended)
+- **Firefox**: Full functionality 
+- **Safari**: Some Web Audio limitations, but core features work
+- **Mobile browsers**: Touch interface supported, microphone features may vary
 
 ## Usage
 
